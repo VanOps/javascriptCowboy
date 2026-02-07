@@ -23,62 +23,109 @@ Comprender los mecanismos internos de JavaScript que hacen funcionar React, Next
 
 ## 📊 Diagrama: Cómo Fluye la Ejecución de JS
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                    MOTOR JAVASCRIPT                           │
-│                                                               │
-│  ┌─────────────┐         ┌──────────────────────────────┐   │
-│  │ CALL STACK  │         │        EVENT LOOP             │   │
-│  │             │         │                               │   │
-│  │ main()      │◄────────│  1. ¿Call Stack vacío?        │   │
-│  │ fn1()       │         │     └── Sí → tomar de cola    │   │
-│  │ fn2()       │         │                               │   │
-│  └──────┬──────┘         └───────────────────────────────┘   │
-│         │                         ▲           ▲              │
-│         ▼                         │           │              │
-│  ┌──────────────┐          ┌──────┴────┐ ┌────┴──────┐      │
-│  │  WEB APIs    │          │MICROTASK  │ │ TASK      │      │
-│  │  setTimeout  │─────────▶│QUEUE      │ │ QUEUE     │      │
-│  │  fetch       │          │ Promises  │ │ setTimeout│      │
-│  │  DOM events  │          │ async/awt │ │ setInterv │      │
-│  └──────────────┘          └───────────┘ └───────────┘      │
-│                                                               │
-│  PRIORIDAD: Sync > Microtasks > Tasks                        │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Motor["🔧 MOTOR JAVASCRIPT"]
+        direction TB
+        
+        subgraph Stack["📚 CALL STACK"]
+            direction TB
+            S1["main()"]
+            S2["fn1()"]
+            S3["fn2()"]
+        end
+        
+        subgraph Loop["⚙️ EVENT LOOP"]
+            direction TB
+            L1["1. ¿Call Stack vacío?"]
+            L2["└── Sí → tomar de cola"]
+        end
+        
+        subgraph WebAPIs["🌐 WEB APIs"]
+            direction TB
+            W1["setTimeout"]
+            W2["fetch"]
+            W3["DOM events"]
+        end
+        
+        subgraph Queues["📋 COLAS"]
+            direction LR
+            
+            subgraph Micro["MICROTASK QUEUE"]
+                direction TB
+                M1["Promises"]
+                M2["async/await"]
+            end
+            
+            subgraph Task["TASK QUEUE"]
+                direction TB
+                T1["setTimeout"]
+                T2["setInterval"]
+            end
+        end
+        
+        Prioridad["<b>⚡ PRIORIDAD:</b><br/>Sync → Microtasks → Tasks"]
+        
+        Loop -.->|"toma de"| Stack
+        WebAPIs -->|"envía callbacks"| Micro
+        WebAPIs -->|"envía callbacks"| Task
+        Micro -.->|"ejecuta en"| Stack
+        Task -.->|"ejecuta en"| Stack
+    end
+    
+    style Motor fill:#e3f2fd,stroke:#1976d2,stroke-width:4px
+    style Stack fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    style Loop fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style WebAPIs fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    style Queues fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    style Micro fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    style Task fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style Prioridad fill:#ffebee,stroke:#c62828,stroke-width:3px
 ```
 
 ---
 
 ## Diagrama de Relaciones entre Conceptos
 
-```
-┌─────────────┐
-│ Event Loop  │──── Explica el ORDEN de ejecución
-└──────┬──────┘
-       │ depende de
-┌──────▼──────┐     ┌─────────────┐
-│ Promises    │────▶│ async/await │──── Sintaxis limpia para Promises
-└──────┬──────┘     └──────┬──────┘
-       │                    │
-       │              ┌─────▼──────┐
-       │              │ Fetch API  │──── Comunicación HTTP
-       │              └────────────┘
-       │
-┌──────▼──────┐
-│  Closures   │──── Funciones que capturan variables
-└──────┬──────┘
-       │ se usa en
-       ├── React hooks (useState, useEffect)
-       ├── Cache de respuestas IA
-       └── Gestores de secrets (GitHub Actions)
-
-┌─────────────┐
-│ Prototypes  │──── Herencia interna de JS
-└──────┬──────┘     (entenderlo, no usarlo directamente)
-       │
-┌──────▼──────┐
-│  Modules    │──── Organizar código en archivos
-└─────────────┘     import/export en Next.js
+```mermaid
+flowchart TB
+    EventLoop["<b>Event Loop</b><br/>Explica el ORDEN de ejecución"]
+    
+    Promises["<b>Promises</b>"]
+    
+    AsyncAwait["<b>async/await</b><br/>Sintaxis limpia para Promises"]
+    
+    FetchAPI["<b>Fetch API</b><br/>Comunicación HTTP"]
+    
+    Closures["<b>Closures</b><br/>Funciones que capturan variables"]
+    
+    Prototypes["<b>Prototypes</b><br/>Herencia interna de JS<br/>(entenderlo, no usarlo directamente)"]
+    
+    Modules["<b>Modules</b><br/>Organizar código en archivos<br/>import/export en Next.js"]
+    
+    Hooks["React hooks<br/>(useState, useEffect)"]
+    Cache["Cache de respuestas IA"]
+    Secrets["Gestores de secrets<br/>(GitHub Actions)"]
+    
+    EventLoop -->|"depende de"| Promises
+    Promises --> AsyncAwait
+    AsyncAwait --> FetchAPI
+    Promises --> Closures
+    Closures -.->|"se usa en"| Hooks
+    Closures -.->|"se usa en"| Cache
+    Closures -.->|"se usa en"| Secrets
+    Prototypes --> Modules
+    
+    style EventLoop fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style Promises fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style AsyncAwait fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    style FetchAPI fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    style Closures fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    style Prototypes fill:#ffebee,stroke:#c62828,stroke-width:3px
+    style Modules fill:#e1f5fe,stroke:#0277bd,stroke-width:3px
+    style Hooks fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style Cache fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style Secrets fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
 ```
 
 ---

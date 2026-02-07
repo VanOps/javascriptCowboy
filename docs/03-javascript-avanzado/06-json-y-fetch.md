@@ -76,31 +76,34 @@ console.log(data.choices[0].message.content);
 
 ## 📊 Diagrama: Flujo de una Petición Fetch
 
-```
- Tu Código JS                        Servidor API
-      │                                    │
-      │── fetch(url, options) ────────────▶│
-      │                                    │
-      │   ┌─────────────────────┐          │
-      │   │ Request              │         │
-      │   │ Method: POST         │         │
-      │   │ Headers: Content-Type│         │
-      │   │ Body: JSON.stringify │─────────▶
-      │   └─────────────────────┘          │
-      │                                    │
-      │                            procesa...
-      │                                    │
-      │◀────────────────────────────────────│
-      │   ┌─────────────────────┐          │
-      │   │ Response             │         │
-      │   │ status: 200          │         │
-      │   │ body: JSON string    │         │
-      │   └──────────┬──────────┘          │
-      │              │                     │
-      │   res.json() │ ← parsea JSON       │
-      │              ▼                     │
-      │   { choices: [...] }               │
-      │   (objeto JavaScript)              │
+```mermaid
+sequenceDiagram
+    participant JS as Tu Código JS
+    participant API as Servidor API
+    
+    Note over JS: Preparar petición
+    JS->>JS: JSON.stringify(body)
+    
+    Note over JS,API: Request
+    JS->>API: fetch(url, options)
+    
+    rect rgb(230, 240, 255)
+        Note right of JS: Method: POST<br/>Headers: Content-Type<br/>Body: JSON string
+    end
+    
+    Note over API: Procesa petición...
+    
+    rect rgb(240, 255, 240)
+        Note over API,JS: Response
+        API-->>JS: status: 200<br/>body: JSON string
+    end
+    
+    Note over JS: Parsear respuesta
+    JS->>JS: await res.json()
+    
+    rect rgb(255, 250, 230)
+        Note over JS: { choices: [...] }<br/>(objeto JavaScript)
+    end
 ```
 
 ---

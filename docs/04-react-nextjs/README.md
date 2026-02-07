@@ -22,38 +22,51 @@ Crear tu primera aplicación web con React + Next.js 15, entendiendo componentes
 
 ## 📊 Diagrama: Arquitectura Next.js 15
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    NEXT.JS 15 (App Router)               │
-│                                                          │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │                  SERVIDOR                         │   │
-│  │                                                   │   │
-│  │  layout.tsx ─── Envuelve TODAS las páginas        │   │
-│  │      │                                            │   │
-│  │      ├── page.tsx ─── Ruta "/"                    │   │
-│  │      ├── chat/page.tsx ─── Ruta "/chat"           │   │
-│  │      └── api/route.ts ─── API endpoint            │   │
-│  │                                                   │   │
-│  │  ┌─── Server Components (por defecto) ────────┐  │   │
-│  │  │  • Acceso directo a DB                     │  │   │
-│  │  │  • 0 KB JavaScript al cliente              │  │   │
-│  │  │  • async/await en el componente            │  │   │
-│  │  └────────────────────────────────────────────┘  │   │
-│  └──────────────────────────────────────────────────┘   │
-│                         │                                │
-│                    HTML + JSON                           │
-│                         │                                │
-│  ┌──────────────────────▼───────────────────────────┐   │
-│  │                  NAVEGADOR                        │   │
-│  │                                                   │   │
-│  │  ┌─── Client Components ('use client') ───────┐  │   │
-│  │  │  • useState, useEffect                     │  │   │
-│  │  │  • onClick, onChange                        │  │   │
-│  │  │  • localStorage, WebSocket                 │  │   │
-│  │  └────────────────────────────────────────────┘  │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph NextJS["NEXT.JS 15 (App Router)"]
+        direction TB
+        
+        subgraph Servidor["SERVIDOR"]
+            direction TB
+            Layout["layout.tsx<br/>Envuelve TODAS las páginas"]
+            PageRoot["page.tsx<br/>Ruta '/'"]
+            PageChat["chat/page.tsx<br/>Ruta '/chat'"]
+            API["api/route.ts<br/>API endpoint"]
+            
+            Layout --> PageRoot
+            Layout --> PageChat
+            Layout --> API
+            
+            subgraph ServerComp["Server Components (por defecto)"]
+                SC1["• Acceso directo a DB"]
+                SC2["• 0 KB JavaScript al cliente"]
+                SC3["• async/await en el componente"]
+            end
+        end
+        
+        Servidor -->|"HTML + JSON"| Navegador
+        
+        subgraph Navegador["NAVEGADOR"]
+            direction TB
+            
+            subgraph ClientComp["Client Components ('use client')"]
+                CC1["• useState, useEffect"]
+                CC2["• onClick, onChange"]
+                CC3["• localStorage, WebSocket"]
+            end
+        end
+    end
+    
+    style NextJS fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    style Servidor fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Navegador fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style ServerComp fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style ClientComp fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style Layout fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style PageRoot fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style PageChat fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style API fill:#bbdefb,stroke:#1976d2,stroke-width:1px
 ```
 
 ---

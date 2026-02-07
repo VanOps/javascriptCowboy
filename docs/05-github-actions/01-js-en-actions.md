@@ -22,26 +22,49 @@
 
 ## 📊 Diagrama: Dónde Vive tu JS
 
-```
-┌─── REPOSITORIO ──────────────────────────────────────┐
-│                                                       │
-│  src/                  ← React/Next.js (tu app web)  │
-│  │                                                    │
-│  .github/                                             │
-│  ├── workflows/        ← YAML (orchestrador)         │
-│  │   ├── ci.yml            inline JS con run: |      │
-│  │   └── deploy.yml        node scripts/*.js         │
-│  │                                                    │
-│  ├── actions/          ← TU JS PERSONALIZADO         │
-│  │   └── deploy-k8s/                                 │
-│  │       ├── action.yml    descriptor                │
-│  │       └── deploy.js     closures+async+modules    │
-│  │                                                    │
-│  └── scripts/          ← JS para workflows           │
-│      ├── deploy-k8s.js     Helm + kubectl            │
-│      ├── vault-fetch.js    Secrets management        │
-│      └── metrics.js        Prometheus queries        │
-└───────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Repo["REPOSITORIO"]
+        direction TB
+        
+        Src["src/<br/>← React/Next.js (tu app web)"]
+        
+        subgraph GitHub[".github/"]
+            direction TB
+            
+            subgraph Workflows["workflows/<br/>← YAML (orchestrador)"]
+                direction LR
+                CI["ci.yml<br/>inline JS con run: |"]:::fileNode
+                Deploy["deploy.yml<br/>node scripts/*.js"]:::fileNode
+            end
+            
+            subgraph Actions["actions/<br/>← TU JS PERSONALIZADO"]
+                direction TB
+                subgraph DeployK8s["deploy-k8s/"]
+                    direction LR
+                    ActionYml["action.yml<br/>descriptor"]:::fileNode
+                    DeployJS["deploy.js<br/>closures+async+modules"]:::fileNode
+                end
+            end
+            
+            subgraph Scripts["scripts/<br/>← JS para workflows"]
+                direction LR
+                DeployScript["deploy-k8s.js<br/>Helm + kubectl"]:::fileNode
+                VaultScript["vault-fetch.js<br/>Secrets management"]:::fileNode
+                MetricsScript["metrics.js<br/>Prometheus queries"]:::fileNode
+            end
+        end
+    end
+    
+    classDef fileNode fill:#a5d6a7,stroke:#2e7d32,stroke-width:1px
+    
+    style Repo fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    style Src fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style GitHub fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Workflows fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style Actions fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style Scripts fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style DeployK8s fill:#e1bee7,stroke:#7b1fa2,stroke-width:1px
 ```
 
 ---

@@ -94,33 +94,48 @@ main().catch(error => {
 
 ## 📊 Diagrama: Flujo de la Action
 
-```
-WORKFLOW (.yml)
-     │
-     │  uses: ./.github/actions/deploy-k8s
-     │  with:
-     │    cluster: production
-     ▼
-┌─ action.yml ──────────────────────────┐
-│  Lee inputs (cluster, image-tag)      │
-│  Configura env vars                   │
-│  Ejecuta: node deploy.js             │
-└──────────────┬────────────────────────┘
-               │
-               ▼
-┌─ deploy.js ───────────────────────────┐
-│  createK8sClient('production')        │
-│       │                               │
-│       ▼                               │
-│  closure retorna función async        │
-│       │                               │
-│       ▼                               │
-│  await deployK8s('update', 'v1.2')    │
-│       │                               │
-│       ▼                               │
-│  fetch → K8s API                      │
-│  execSync → helm upgrade              │
-└───────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Workflow["WORKFLOW (.yml)<br/>uses: ./.github/actions/deploy-k8s<br/>with: cluster: production"]
+    
+    Workflow --> ActionYML
+    
+    subgraph ActionYML["action.yml"]
+        direction TB
+        Input["📥 Lee inputs (cluster, image-tag)"]
+        Env["⚙️ Configura env vars"]
+        Execute["▶️ Ejecuta: node deploy.js"]
+        
+        Input --> Env --> Execute
+    end
+    
+    Execute --> DeployJS
+    
+    subgraph DeployJS["deploy.js"]
+        direction TB
+        Create["🏗️ createK8sClient('production')"]
+        Closure["🔒 closure retorna función async"]
+        Deploy["🚀 await deployK8s('update', 'v1.2')"]
+        Fetch["📡 fetch → K8s API"]
+        Helm["⚡ execSync → helm upgrade"]
+        
+        Create --> Closure
+        Closure --> Deploy
+        Deploy --> Fetch
+        Fetch --> Helm
+    end
+    
+    style Workflow fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    style ActionYML fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style DeployJS fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style Input fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style Env fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style Execute fill:#ffcc80,stroke:#f57c00,stroke-width:2px
+    style Create fill:#a5d6a7,stroke:#388e3c,stroke-width:1px
+    style Closure fill:#ce93d8,stroke:#7b1fa2,stroke-width:1px
+    style Deploy fill:#90caf9,stroke:#1976d2,stroke-width:1px
+    style Fetch fill:#ffab91,stroke:#e64a19,stroke-width:1px
+    style Helm fill:#fff59d,stroke:#f57f17,stroke-width:1px
 ```
 
 ---

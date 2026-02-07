@@ -19,37 +19,54 @@ Crear GitHub Actions que usen LLMs (Ollama/Llama local o GitHub Copilot CLI) par
 
 ## 📊 Diagrama: AI CI Gate
 
-```
-┌─── PIPELINE CI/CD ──────────────────────────────────┐
-│                                                      │
-│  1. Build                                            │
-│     │                                                │
-│  2. Test                                             │
-│     │                                                │
-│  3. Capturar logs/trazas                             │
-│     │                                                │
-│     ▼                                                │
-│  ┌─── AI CI GATE ──────────────────────────────┐     │
-│  │                                              │     │
-│  │  context: logs K8s / build / Docker          │     │
-│  │  prompt:  "¿Es seguro hacer deploy?"         │     │
-│  │                                              │     │
-│  │  ┌──────────┐    ┌───────────────────┐       │     │
-│  │  │  OLLAMA  │ o  │  COPILOT CLI      │       │     │
-│  │  │  (local) │    │  (GitHub cloud)   │       │     │
-│  │  └────┬─────┘    └────────┬──────────┘       │     │
-│  │       │                   │                  │     │
-│  │       └───────┬───────────┘                  │     │
-│  │               ▼                              │     │
-│  │  { isValid: true/false,                      │     │
-│  │    score: 85,                                │     │
-│  │    analysis: "..." }                         │     │
-│  └──────────────────────────────────────────────┘     │
-│     │                                                │
-│     ├── ✅ isValid → 4. Deploy                       │
-│     └── ❌ !isValid → ❌ STOP + análisis             │
-│                                                      │
-└──────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Pipeline["PIPELINE CI/CD"]
+        direction TB
+        
+        Build["1. Build"]
+        Test["2. Test"]
+        Logs["3. Capturar logs/trazas"]
+        
+        Build --> Test
+        Test --> Logs
+        
+        Logs --> AIGate
+        
+        subgraph AIGate["AI CI GATE"]
+            direction TB
+            
+            Context["context: logs K8s / build / Docker<br/>prompt: '¿Es seguro hacer deploy?'"]
+            
+            Context --> LLMChoice
+            
+            subgraph LLMChoice["Opciones LLM"]
+                direction LR
+                Ollama["OLLAMA<br/>(local)"]
+                Copilot["COPILOT CLI<br/>(GitHub cloud)"]
+            end
+            
+            LLMChoice --> Response["{ isValid: true/false,<br/>  score: 85,<br/>  analysis: '...' }"]
+        end
+        
+        Response --> Decision{"Validación"}
+        Decision -->|"✅ isValid"| Deploy["4. Deploy"]
+        Decision -->|"❌ !isValid"| Stop["❌ STOP + análisis"]
+    end
+    
+    style Pipeline fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    style Build fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style Test fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style Logs fill:#bbdefb,stroke:#1976d2,stroke-width:1px
+    style AIGate fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Context fill:#fff9c4,stroke:#f57f17,stroke-width:1px
+    style LLMChoice fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style Ollama fill:#ce93d8,stroke:#7b1fa2,stroke-width:1px
+    style Copilot fill:#ce93d8,stroke:#7b1fa2,stroke-width:1px
+    style Response fill:#e1bee7,stroke:#7b1fa2,stroke-width:1px
+    style Decision fill:#fff59d,stroke:#f57f17,stroke-width:2px
+    style Deploy fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style Stop fill:#ffcdd2,stroke:#c62828,stroke-width:2px
 ```
 
 ---

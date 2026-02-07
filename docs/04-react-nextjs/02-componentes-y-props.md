@@ -74,25 +74,34 @@ function Home() {
 
 ## 📊 Diagrama: Flujo de Props
 
-```
-┌─── Home (padre) ──────────────────────────────┐
-│                                                │
-│  const datos = { texto: 'Hola', count: 5 };   │
-│                                                │
-│  <BotonIA texto={datos.texto} />               │
-│           ─────────┬──────────                 │
-│                    │ props                     │
-│  ┌─────────────────▼───────────────────────┐   │
-│  │  BotonIA (hijo)                         │   │
-│  │                                         │   │
-│  │  function BotonIA({ texto }) {          │   │
-│  │    return <button>{texto}</button>;     │   │
-│  │  }                                      │   │
-│  └─────────────────────────────────────────┘   │
-│                                                │
-│  REGLA: Datos fluyen ↓ (padre → hijo)          │
-│         Eventos fluyen ↑ (hijo → padre via cb) │
-└────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Home["🏠 Home (padre)"]
+        direction TB
+        Datos["const datos = { texto: 'Hola', count: 5 }"]
+        Render["&lt;BotonIA texto={datos.texto} /&gt;"]
+        
+        subgraph BotonIA["🔘 BotonIA (hijo)"]
+            direction TB
+            Funcion["function BotonIA({ texto }) {"]
+            Return["return &lt;button&gt;{texto}&lt;/button&gt;"]
+            Close["}"]
+        end
+        
+        Reglas["<b>⚡ REGLA:</b><br/>📥 Datos fluyen ↓ (padre → hijo)<br/>📤 Eventos fluyen ↑ (hijo → padre via callback)"]
+    end
+    
+    Datos -.-> Render
+    Render -->|"props"| BotonIA
+    
+    style Home fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style BotonIA fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style Datos fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Render fill:#bbdefb,stroke:#1565c0,stroke-width:2px
+    style Reglas fill:#ffebee,stroke:#c62828,stroke-width:3px
+    style Funcion fill:#c8e6c9,stroke:#2e7d32,stroke-width:1px
+    style Return fill:#c8e6c9,stroke:#2e7d32,stroke-width:1px
+    style Close fill:#c8e6c9,stroke:#2e7d32,stroke-width:1px
 ```
 
 ---

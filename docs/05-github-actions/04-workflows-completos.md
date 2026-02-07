@@ -6,13 +6,28 @@
 
 ## 📊 Estrategia Git Flow
 
-```
-feature/* ──→ PR ──→ develop ──→ staging (pruebas)
-                         │
-                    merge to main
-                         │
-                         ▼
-                       main ──→ prod (release)
+```mermaid
+gitGraph
+    commit id: "Initial"
+    branch develop
+    checkout develop
+    commit id: "Setup staging"
+    
+    branch feature/new-ui
+    checkout feature/new-ui
+    commit id: "Add component"
+    commit id: "Add styles"
+    
+    checkout develop
+    merge feature/new-ui tag: "PR merged"
+    commit id: "Deploy to staging" type: HIGHLIGHT
+    
+    checkout main
+    merge develop tag: "Release v1.0"
+    commit id: "Deploy to prod" type: HIGHLIGHT
+    
+    checkout develop
+    commit id: "Continue development"
 ```
 
 ---
@@ -91,26 +106,51 @@ jobs:
 
 ## 📊 Diagrama: Flujo del Workflow
 
-```
-push to main
-     │
-     ▼
-┌─ CI Job ────────────────────┐
-│  checkout → setup-node      │
-│  npm ci → lint → test       │
-│  npm run build              │
-│                             │
-│  ¿Pasa todo?                │
-│  ├── ❌ No → workflow falla │
-│  └── ✅ Sí ──┐              │
-└──────────────┼──────────────┘
-               │ needs: ci
-               ▼
-┌─ Deploy Job ────────────────┐
-│  ¿Qué rama?                 │
-│  ├── main    → Vercel prod  │
-│  └── develop → K8s staging  │
-└──────────────────────────────┘
+```mermaid
+flowchart TB
+    Push["📤 push to main/develop"]
+    
+    Push --> CIJob
+    
+    subgraph CIJob["CI Job"]
+        direction TB
+        Checkout["checkout"]
+        SetupNode["setup-node"]
+        NpmCI["npm ci"]
+        Lint["npm run lint"]
+        Test["npm test"]
+        Build["npm run build"]
+        
+        Checkout --> SetupNode
+        SetupNode --> NpmCI
+        NpmCI --> Lint
+        Lint --> Test
+        Test --> Build
+    end
+    
+    Build --> Decision{"¿Pasa todo?"}
+    
+    Decision -->|"❌ No"| Fail["workflow falla"]
+    Decision -->|"✅ Sí"| DeployJob
+    
+    subgraph DeployJob["Deploy Job<br/>(needs: ci)"]
+        direction TB
+        Branch{"¿Qué rama?"}
+        VercelProd["🚀 Vercel Deploy<br/>(producción)"]
+        K8sStaging["☁️ K8s Deploy<br/>(staging)"]
+        
+        Branch -->|"main"| VercelProd
+        Branch -->|"develop"| K8sStaging
+    end
+    
+    style Push fill:#e3f2fd,stroke:#1565c0,stroke-width:3px
+    style CIJob fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style DeployJob fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style Decision fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style Branch fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    style Fail fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    style VercelProd fill:#c8e6c9,stroke:#1b5e20,stroke-width:2px
+    style K8sStaging fill:#bbdefb,stroke:#1565c0,stroke-width:2px
 ```
 
 ---

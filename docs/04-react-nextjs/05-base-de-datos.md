@@ -8,16 +8,41 @@
 
 ## 📊 Diagrama: Antes vs Ahora
 
-```
-ANTES (SPA tradicional):
- Navegador → fetch → /api/users → DB → JSON → Navegador
- │──── roundtrip 1 ────│──── roundtrip 2 ────│
- Total: 2 saltos de red
+### SPA Tradicional (ANTES)
 
-AHORA (Server Components):
- Servidor → db.query() → HTML → Navegador
- │──── 1 consulta directa ────│
- Total: 0 saltos internos
+```mermaid
+sequenceDiagram
+    participant N as Navegador
+    participant API as /api/users
+    participant DB as Base de Datos
+    
+    Note over N,DB: ❌ 2 saltos de red
+    N->>API: fetch('/api/users')
+    Note right of N: Roundtrip 1
+    API->>DB: SELECT * FROM users
+    DB-->>API: Datos
+    API-->>N: JSON response
+    Note right of N: Roundtrip 2
+    N->>N: Renderiza con datos
+    
+    Note over N,DB: Total: ~300ms + 50KB JSON
+```
+
+### Server Components (AHORA)
+
+```mermaid
+sequenceDiagram
+    participant S as Servidor (Next.js)
+    participant DB as Base de Datos
+    participant N as Navegador
+    
+    Note over S,N: ✅ 1 consulta directa
+    S->>DB: db.query('SELECT...')
+    DB-->>S: Datos
+    S->>S: Renderiza HTML con datos
+    S-->>N: HTML completo
+    
+    Note over S,N: Total: ~150ms + 12KB HTML
 ```
 
 ---
@@ -102,24 +127,27 @@ export default function FormularioUsuario() {
 
 ## 📊 Diagrama: Flujo con Server Actions
 
-```
- 1. Usuario llena form
-         │
-         ▼
- 2. submit → Server Action (en servidor)
-         │
-         ▼
- 3. db.query('INSERT...')
-         │
-         ▼
- 4. revalidatePath('/usuarios')
-         │
-         ▼
- 5. Next.js re-renderiza Server Component
-         │
-         ▼
- 6. HTML actualizado → navegador
-    (datos frescos, sin refresh manual)
+```mermaid
+flowchart TB
+    User["👤 1. Usuario llena form"]
+    Submit["📤 2. submit → Server Action<br/>(se ejecuta en servidor)"]
+    Query["💾 3. db.query('INSERT...')"]
+    Revalidate["🔄 4. revalidatePath('/usuarios')"]
+    ReRender["⚡ 5. Next.js re-renderiza<br/>Server Component"]
+    Update["✅ 6. HTML actualizado → navegador<br/>(datos frescos, sin refresh manual)"]
+    
+    User --> Submit
+    Submit --> Query
+    Query --> Revalidate
+    Revalidate --> ReRender
+    ReRender --> Update
+    
+    style User fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Submit fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Query fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Revalidate fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style ReRender fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style Update fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
 ```
 
 ---

@@ -28,20 +28,16 @@ export default function Contador() {
 
 ### Diagrama del Re-render
 
-```
-ESTADO INICIAL: cuenta = 0
-┌──────────────────────────┐
-│  <p>Clicks: 0</p>        │
-│  <button>+1</button>     │
-└──────────────────────────┘
-            │
-            │ Click → setCuenta(1)
-            ▼
-RE-RENDER: cuenta = 1
-┌──────────────────────────┐
-│  <p>Clicks: 1</p>        │  ← React actualiza SOLO esto
-│  <button>+1</button>     │
-└──────────────────────────┘
+```mermaid
+stateDiagram-v2
+    [*] --> EstadoInicial: Componente monta
+    
+    state "cuenta = 0<br/>Render: Clicks: 0" as EstadoInicial
+    
+    state "cuenta = 1<br/>Render: Clicks: 1<br/>React actualiza SOLO esto" as ReRender
+    
+    EstadoInicial --> ReRender: Click → setCuenta(1)
+    ReRender --> ReRender: Click → setCuenta(cuenta+1)
 ```
 
 ---
@@ -74,36 +70,51 @@ export default function DatosIA() {
 
 ### Diagrama del Ciclo de Vida
 
-```
-MONTAJE (Mount)
-     │
-     ▼
-┌─ Render #1 ─────────────────────┐
-│  React ejecuta la función       │
-│  Genera JSX con estado inicial  │
-│  Muestra en pantalla            │
-└─────────────┬───────────────────┘
-              │
-              ▼
-┌─ useEffect ─────────────────────┐
-│  Se ejecuta DESPUÉS del paint   │
-│  Aquí: fetch, subscripciones    │
-└─────────────┬───────────────────┘
-              │ setState(nuevoDato)
-              ▼
-┌─ Re-render ─────────────────────┐
-│  React re-ejecuta la función    │
-│  Compara JSX viejo vs nuevo     │
-│  Actualiza SOLO lo que cambió   │
-└─────────────────────────────────┘
-
-DESMONTAJE (Unmount)
-     │
-     ▼
-┌─ useEffect cleanup ────────────┐
-│  return () => { limpiar(); }   │
-│  Cancelar subscripciones       │
-└────────────────────────────────┘
+```mermaid
+flowchart TB
+    Montaje["🔧 MONTAJE (Mount)"]
+    
+    subgraph Render1["📝 Render #1"]
+        direction TB
+        R1["React ejecuta la función"]
+        R2["Genera JSX con estado inicial"]
+        R3["Muestra en pantalla"]
+    end
+    
+    subgraph Effect["⚡ useEffect"]
+        direction TB
+        E1["Se ejecuta DESPUÉS del paint"]
+        E2["Aquí: fetch, subscripciones"]
+    end
+    
+    subgraph ReRender["🔄 Re-render"]
+        direction TB
+        RR1["React re-ejecuta la función"]
+        RR2["Compara JSX viejo vs nuevo"]
+        RR3["Actualiza SOLO lo que cambió"]
+    end
+    
+    Desmontaje["🗑️ DESMONTAJE (Unmount)"]
+    
+    subgraph Cleanup["🧹 useEffect cleanup"]
+        direction TB
+        C1["return () => { limpiar() }"]
+        C2["Cancelar subscripciones"]
+    end
+    
+    Montaje --> Render1
+    Render1 --> Effect
+    Effect -->|"setState(nuevoDato)"| ReRender
+    ReRender -.->|"nuevo cambio"| Effect
+    
+    Desmontaje --> Cleanup
+    
+    style Montaje fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    style Render1 fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    style Effect fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style ReRender fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    style Desmontaje fill:#ffebee,stroke:#c62828,stroke-width:3px
+    style Cleanup fill:#fce4ec,stroke:#c2185b,stroke-width:3px
 ```
 
 ---
