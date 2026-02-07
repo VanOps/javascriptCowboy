@@ -1,0 +1,30 @@
+{
+  "name": "ollama-llm-ci-validator",
+  "version": "1.0.0",
+  "description": "LLM CI/CD validator usando Ollama/Llama para analizar logs y contexto",
+  "type": "module",
+  "main": "validator.js",
+  "scripts": {
+    "validate": "node validator.js",
+    "test": "node validator.js"
+  },
+  "keywords": [
+    "ollama",
+    "llama",
+    "llm",
+    "ci",
+    "cd",
+    "validator",
+    "github-actions",
+    "kubernetes",
+    "logs"
+  ],
+  "author": "JavaScript Cowboy",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

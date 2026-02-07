@@ -1,0 +1,46 @@
+{
+  "pod": {
+    "name": "backend-api-7d9f8c6b5-xk2mw",
+    "namespace": "production",
+    "status": "CrashLoopBackOff",
+    "restarts": 15
+  },
+  "events": [
+    {
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container backend-api in pod backend-api-7d9f8c6b5-xk2mw_production(a3b2c1d4-5e6f-7g8h-9i0j-1k2l3m4n5o6p)"
+    },
+    {
+      "type": "Warning",
+      "reason": "Failed",
+      "message": "Error: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: exec: \"npm\": executable file not found in $PATH: unknown"
+    }
+  ],
+  "logs": [
+    "npm ERR! code ENOENT",
+    "npm ERR! syscall open",
+    "npm ERR! path /app/package.json",
+    "npm ERR! errno -2",
+    "npm ERR! enoent ENOENT: no such file or directory, open '/app/package.json'",
+    "npm ERR! enoent This is related to npm not being able to find a file.",
+    "Error from server (BadRequest): container \"backend-api\" in pod \"backend-api-7d9f8c6b5-xk2mw\" is waiting to start: CrashLoopBackOff"
+  ],
+  "containerSpec": {
+    "image": "ghcr.io/my-org/backend-api:v2.3.1",
+    "command": ["npm", "start"],
+    "workingDir": "/app",
+    "ports": [
+      {
+        "containerPort": 3000,
+        "protocol": "TCP"
+      }
+    ]
+  },
+  "previousDeploy": {
+    "image": "ghcr.io/my-org/backend-api:v2.3.0",
+    "status": "Running",
+    "uptime": "7 days"
+  },
+  "context": "Este pod falló inmediatamente después de un deploy de nueva versión v2.3.1. La versión anterior v2.3.0 estaba estable por 7 días. Los logs muestran que npm no puede encontrar package.json, y el runtime indica que npm no está en $PATH."
+}

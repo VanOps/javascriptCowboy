@@ -1,0 +1,5 @@
+/* Estilos globales básicos para el ejemplo */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,0 +1,93 @@
+name: '🤖 Copilot CLI CI Validator'
+description: 'Valida logs de CI/CD con GitHub Copilot CLI analizando contexto de repo + logs'
+author: 'JavaScript Cowboy'
+
+branding:
+  icon: 'check-circle'
+  color: 'blue'
+
+inputs:
+  context:
+    description: 'JSON/TXT logs o contexto (K8s, tests, build, deployment)'
+    required: true
+  
+  prompt:
+    description: 'Instrucción para Copilot (ej: "Analiza los tests fallidos y determina severidad")'
+    required: true
+  
+  github-token:
+    description: 'GitHub PAT con permisos Copilot (GITHUB_TOKEN o custom PAT)'
+    required: true
+  
+  include-repository-context:
+    description: 'Incluir contexto del repositorio en el análisis (código, issues, PRs)'
+    required: false
+    default: 'true'
+  
+  temperature:
+    description: 'Temperatura del modelo (0.0-1.0). Menor = más determinístico'
+    required: false
+    default: '0.3'
+
+outputs:
+  is-valid:
+    description: 'Validación booleana: true (CI aprobada) / false (CI bloqueada)'
+    value: ${{ steps.copilot-validator.outputs.is-valid }}
+  
+  analysis:
+    description: 'Análisis detallado de Copilot sobre el contexto'
+    value: ${{ steps.copilot-validator.outputs.analysis }}
+  
+  score:
+    description: 'Score numérico 0-100 de calidad CI/CD'
+    value: ${{ steps.copilot-validator.outputs.score }}
+  
+  confidence:
+    description: 'Nivel de confianza del análisis (low/medium/high)'
+    value: ${{ steps.copilot-validator.outputs.confidence }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🟢 Setup Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: 📦 Install Dependencies
+      run: npm ci --prefix ${{ github.action_path }}/src
+      shell: bash
+
+    - name: 🔐 Configure Copilot Auth
+      run: |
+        echo "🔐 Configurando autenticación de GitHub Copilot..."
+        echo "${{ inputs.github-token }}" | gh auth login --with-token
+        gh auth status
+      shell: bash
+
+    - name: 🤖 Copilot CI Validation
+      id: copilot-validator
+      run: node ${{ github.action_path }}/src/validator.js
+      shell: bash
+      env:
+        CONTEXT: ${{ inputs.context }}
+        PROMPT: ${{ inputs.prompt }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        INCLUDE_REPO_CONTEXT: ${{ inputs.include-repository-context }}
+        TEMPERATURE: ${{ inputs.temperature }}
+        GITHUB_OUTPUT: ${{ env.GITHUB_OUTPUT }}
+        GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+
+    - name: 📊 Generate Summary
+      if: always()
+      run: |
+        echo "## 🤖 Copilot Validation Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Score**: ${{ steps.copilot-validator.outputs.score }}/100" >> $GITHUB_STEP_SUMMARY
+        echo "**Confidence**: ${{ steps.copilot-validator.outputs.confidence }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Valid**: ${{ steps.copilot-validator.outputs.is-valid }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📝 Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "${{ steps.copilot-validator.outputs.analysis }}" >> $GITHUB_STEP_SUMMARY
+      shell: bash

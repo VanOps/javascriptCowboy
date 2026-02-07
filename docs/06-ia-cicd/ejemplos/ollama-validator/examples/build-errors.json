@@ -1,0 +1,70 @@
+{
+  "buildInfo": {
+    "project": "frontend-react-app",
+    "branch": "feature/checkout-redesign",
+    "commit": "a1b2c3d4e5f6",
+    "buildNumber": "1234",
+    "triggeredBy": "pull_request"
+  },
+  "steps": [
+    {
+      "name": "Install dependencies",
+      "status": "success",
+      "duration": "45s",
+      "output": "added 1532 packages in 43s"
+    },
+    {
+      "name": "Lint",
+      "status": "warning",
+      "duration": "12s",
+      "output": [
+        "Warning: 'React' is defined but never used  no-unused-vars",
+        "Warning: Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.",
+        "✖ 23 problems (0 errors, 23 warnings)"
+      ]
+    },
+    {
+      "name": "Build",
+      "status": "failed",
+      "duration": "67s",
+      "exitCode": 1,
+      "output": [
+        "Creating an optimized production build...",
+        "Compiled with problems:",
+        "",
+        "ERROR in ./src/pages/Checkout.tsx:45:12",
+        "TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.",
+        "Type 'undefined' is not assignable to type 'string'.",
+        "",
+        "ERROR in ./src/components/PaymentForm.tsx:89:5",
+        "TS2322: Type '{ cardNumber: string; }' is missing the following properties from type 'PaymentData': cvv, expiryDate",
+        "",
+        "ERROR in ./src/utils/validation.ts:23:15",
+        "TS2339: Property 'match' does not exist on type 'never'.",
+        "",
+        "ERROR",
+        "Failed to compile."
+      ]
+    }
+  ],
+  "summary": {
+    "totalSteps": 3,
+    "succeeded": 1,
+    "warnings": 1,
+    "failed": 1,
+    "totalDuration": "124s"
+  },
+  "previousBuilds": [
+    {
+      "commit": "z9y8x7w6v5u4",
+      "status": "success",
+      "duration": "98s"
+    },
+    {
+      "commit": "p0o9i8u7y6t5",
+      "status": "success",
+      "duration": "102s"
+    }
+  ],
+  "context": "Este build falló durante la compilación de TypeScript. Los últimos 2 builds en la rama main fueron exitosos. Los errores son de tipo TypeScript relacionados con types undefined y propiedades faltantes. Hay 23 warnings de lint que no bloquearon el build."
+}

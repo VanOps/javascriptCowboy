@@ -1,0 +1,195 @@
+# =============================================
+# Workflow con Vault + AWX/Ansible
+# Archivo: .github/workflows/vault-deploy.yml
+# =============================================
+
+name: 🎭 Vault + Ansible Deploy
+
+on:
+  workflow_dispatch:  # Trigger manual
+    inputs:
+      environment:
+        description: 'Ambiente a desplegar'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      
+      dry-run:
+        description: 'Dry run (solo validar)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  # ═══════════════════════════════════════
+  # JOB 1: Obtener secrets de Vault
+  # ═══════════════════════════════════════
+  fetch-secrets:
+    name: 🔐 Fetch Vault Secrets
+    runs-on: ubuntu-latest
+    
+    outputs:
+      db-password: ${{ steps.vault.outputs.db-password }}
+      api-key: ${{ steps.vault.outputs.api-key }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔐 Fetch secrets from Vault
+        id: vault
+        env:
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+        run: |
+          # Ejecutar script Node.js que usa fetch + closures
+          node scripts/vault-fetch.js
+          
+          # Los secrets se escriben a GITHUB_OUTPUT
+          # El script hace: echo "db-password=xxx" >> $GITHUB_OUTPUT
+
+      - name: ✅ Verify secrets fetched
+        run: |
+          if [ -z "${{ steps.vault.outputs.db-password }}" ]; then
+            echo "❌ Error: DB password no obtenida"
+            exit 1
+          fi
+          echo "✅ Secrets obtenidos exitosamente"
+
+  # ═══════════════════════════════════════
+  # JOB 2: Deploy con AWX/Ansible
+  # ═══════════════════════════════════════
+  deploy:
+    name: 🎭 AWX Deploy
+    needs: fetch-secrets
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🎭 Launch AWX Job Template
+        env:
+          AWX_URL: ${{ secrets.AWX_URL }}
+          AWX_TOKEN: ${{ secrets.AWX_TOKEN }}
+          TEMPLATE_ID: ${{ vars.AWX_TEMPLATE_ID }}
+          ENVIRONMENT: ${{ github.event.inputs.environment }}
+          DRY_RUN: ${{ github.event.inputs.dry-run }}
+          DB_PASSWORD: ${{ needs.fetch-secrets.outputs.db-password }}
+        run: |
+          # Construir JSON con extra_vars
+          EXTRA_VARS=$(cat <<EOF
+          {
+            "environment": "$ENVIRONMENT",
+            "dry_run": $DRY_RUN,
+            "db_password": "$DB_PASSWORD",
+            "git_sha": "${{ github.sha }}",
+            "git_ref": "${{ github.ref }}"
+          }
+          EOF
+          )
+
+          # Lanzar job en AWX usando curl
+          RESPONSE=$(curl -s -X POST \
+            "$AWX_URL/api/v2/job_templates/$TEMPLATE_ID/launch/" \
+            -H "Authorization: Bearer $AWX_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$EXTRA_VARS")
+
+          # Extraer job ID
+          JOB_ID=$(echo $RESPONSE | jq -r '.id')
+          
+          if [ "$JOB_ID" == "null" ]; then
+            echo "❌ Error launching AWX job"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
+
+          echo "🚀 AWX Job launched: $JOB_ID"
+          echo "🔗 URL: $AWX_URL/#/jobs/playbook/$JOB_ID"
+          
+          # Opcional: Esperar a que termine el job
+          # (En producción, esto lo haría un script Node.js con mejor manejo)
+          echo "⏳ Waiting for job completion..."
+          
+          for i in {1..60}; do
+            STATUS=$(curl -s \
+              "$AWX_URL/api/v2/jobs/$JOB_ID/" \
+              -H "Authorization: Bearer $AWX_TOKEN" | jq -r '.status')
+            
+            echo "Status: $STATUS"
+            
+            if [ "$STATUS" == "successful" ]; then
+              echo "✅ Deployment successful!"
+              exit 0
+            elif [ "$STATUS" == "failed" ]; then
+              echo "❌ Deployment failed!"
+              exit 1
+            fi
+            
+            sleep 10
+          done
+          
+          echo "⏰ Timeout waiting for job"
+          exit 1
+
+      - name: 📊 Deployment summary
+        if: always()
+        run: |
+          echo "### 🎭 AWX Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ github.event.inputs.dry-run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+# 🔍 CONCEPTOS DEMOSTRADOS:
+#
+# 1. workflow_dispatch
+#    - Trigger manual desde UI de GitHub
+#    - Inputs tipo choice, boolean, string
+#
+# 2. Job outputs
+#    - outputs: Compartir datos entre jobs
+#    - ${{ needs.job.outputs.key }}
+#
+# 3. Dynamic environments
+#    - environment: ${{ inputs.environment }}
+#    - Protection rules por ambiente
+#
+# 4. Heredoc en bash
+#    - cat <<EOF ... EOF
+#    - Construir JSON multi-línea
+#
+# 5. jq para JSON
+#    - jq -r '.id' extrae valores
+#    - jq . formatea pretty-print
+#
+# 6. Polling pattern
+#    - Loop + sleep para esperar resultado
+#    - Mejor con Node.js + async/await
+#
+# 7. GitHub Step Summary
+#    - echo >> $GITHUB_STEP_SUMMARY
+#    - Markdown en UI de GitHub
+#
+# SECRETS REQUERIDOS:
+# - VAULT_ADDR (https://vault.example.com)
+# - VAULT_TOKEN (token de acceso a Vault)
+# - AWX_URL (https://awx.example.com)
+# - AWX_TOKEN (Personal Access Token de AWX)
+#
+# VARIABLES REQUERIDAS:
+# - AWX_TEMPLATE_ID (ID del Job Template en AWX)
