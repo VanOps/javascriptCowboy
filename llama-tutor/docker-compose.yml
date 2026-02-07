@@ -14,13 +14,17 @@ services:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
+      - ./ollama-init.sh:/ollama-init.sh:ro
+    environment:
+      - OLLAMA_MODEL=llama3.2
+    entrypoint: ["/bin/sh", "/ollama-init.sh"]
     restart: unless-stopped
-    # Descarga llama3.2:3b al arrancar (primera vez tarda ~2GB)
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD-SHELL", "ollama list | grep -q llama3.2"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 30
+      start_period: 120s
 
   # ── Llama Tutor — webapp Next.js ──
   llama-tutor:
@@ -29,7 +33,7 @@ services:
       - "3001:3000"
     environment:
       - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3.2:3b
+      - OLLAMA_MODEL=llama3.2
     depends_on:
       ollama:
         condition: service_healthy
