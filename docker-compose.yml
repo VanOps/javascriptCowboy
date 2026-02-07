@@ -1,0 +1,18 @@
+# Docker Compose v2 — Copilot Tutor
+# Chat socrático con GitHub Copilot API
+#
+# Uso:
+#   1. Configurar GITHUB_TOKEN en copilot-tutor/.env
+#   2. docker compose up --build -d
+#   → http://localhost:3000
+#
+# Nota: Para Llama Tutor (LLM local), ver llama-tutor/docker-compose.yml
+
+services:
+  copilot-tutor:
+    build: ./copilot-tutor
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./copilot-tutor/.env
+    restart: unless-stopped

@@ -1,0 +1,39 @@
+# Docker Compose v2 — Llama Tutor + Ollama
+# Tutor socrático local con LLM Llama 3.2 (sin APIs externas)
+#
+# Uso:
+#   docker compose up --build -d
+#   → Llama Tutor: http://localhost:3001
+#   → Ollama API: http://localhost:11434
+
+services:
+  # ── Ollama — servidor LLM local ──
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    # Descarga llama3.2:3b al arrancar (primera vez tarda ~2GB)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Llama Tutor — webapp Next.js ──
+  llama-tutor:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2:3b
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
