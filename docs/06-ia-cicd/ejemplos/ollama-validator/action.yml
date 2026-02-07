@@ -1,0 +1,101 @@
+name: '🤖 LLM CI Validator (Ollama/Llama)'
+description: 'Valida logs de CI/CD con LLM local (Ollama) analizando K8s, build, tests'
+author: 'JavaScript Cowboy'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  context:
+    description: 'JSON/TXT logs o contexto (K8s, build traces, Docker, test output)'
+    required: true
+  
+  prompt:
+    description: 'Instrucción para el LLM (ej: "¿Es seguro hacer deploy con estos logs?")'
+    required: true
+  
+  model:
+    description: 'Modelo de Ollama a usar (llama3.2, codellama, mistral, etc.)'
+    required: false
+    default: 'llama3.2'
+  
+  llm-url:
+    description: 'URL del servidor Ollama (localhost o self-hosted)'
+    required: false
+    default: 'http://localhost:11434'
+  
+  cache-enabled:
+    description: 'Habilitar caché de respuestas LLM (reduce llamadas repetidas)'
+    required: false
+    default: 'true'
+
+outputs:
+  is-valid:
+    description: 'Validación booleana: true (CI aprobada) / false (CI bloqueada)'
+    value: ${{ steps.run-validator.outputs.is-valid }}
+  
+  analysis:
+    description: 'Análisis detallado del LLM sobre el contexto CI/CD'
+    value: ${{ steps.run-validator.outputs.analysis }}
+  
+  score:
+    description: 'Score numérico 0-100 de calidad/confianza del CI/CD'
+    value: ${{ steps.run-validator.outputs.score }}
+  
+  model-used:
+    description: 'Modelo LLM que generó la respuesta'
+    value: ${{ steps.run-validator.outputs.model-used }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🟢 Setup Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: ${{ github.action_path }}/src/package-lock.json
+
+    - name: 📦 Install Dependencies
+      run: npm ci --prefix ${{ github.action_path }}/src
+      shell: bash
+
+    - name: 🔍 Verificar Ollama Disponible
+      run: |
+        echo "🔍 Verificando conectividad con Ollama..."
+        curl -f ${{ inputs.llm-url }}/api/tags || {
+          echo "❌ Error: No se puede conectar a Ollama en ${{ inputs.llm-url }}"
+          echo "   Asegúrate de que Ollama esté corriendo:"
+          echo "   - Local: ollama serve"
+          echo "   - Docker: docker run -d -p 11434:11434 ollama/ollama"
+          exit 1
+        }
+        echo "✅ Ollama está disponible"
+      shell: bash
+
+    - name: 🤖 LLM CI Validation
+      id: run-validator
+      run: node ${{ github.action_path }}/src/validator.js
+      shell: bash
+      env:
+        CONTEXT: ${{ inputs.context }}
+        PROMPT: ${{ inputs.prompt }}
+        MODEL: ${{ inputs.model }}
+        LLM_URL: ${{ inputs.llm-url }}
+        CACHE_ENABLED: ${{ inputs.cache-enabled }}
+        GITHUB_OUTPUT: ${{ env.GITHUB_OUTPUT }}
+        GITHUB_STEP_SUMMARY: ${{ env.GITHUB_STEP_SUMMARY }}
+
+    - name: 📊 Generate Summary
+      if: always()
+      run: |
+        echo "## 🤖 LLM Validation Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Model**: ${{ steps.run-validator.outputs.model-used }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Score**: ${{ steps.run-validator.outputs.score }}/100" >> $GITHUB_STEP_SUMMARY
+        echo "**Valid**: ${{ steps.run-validator.outputs.is-valid }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📝 Analysis" >> $GITHUB_STEP_SUMMARY
+        echo "${{ steps.run-validator.outputs.analysis }}" >> $GITHUB_STEP_SUMMARY
+      shell: bash

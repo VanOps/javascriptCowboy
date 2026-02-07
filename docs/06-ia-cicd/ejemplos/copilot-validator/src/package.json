@@ -1,0 +1,31 @@
+{
+  "name": "copilot-cli-ci-validator",
+  "version": "1.0.0",
+  "description": "GitHub Copilot CLI validator para CI/CD analizando logs y contexto",
+  "type": "module",
+  "main": "validator.js",
+  "scripts": {
+    "validate": "node validator.js",
+    "test": "node validator.js"
+  },
+  "keywords": [
+    "github-copilot",
+    "copilot-cli",
+    "ai",
+    "ci",
+    "cd",
+    "validator",
+    "github-actions",
+    "logs"
+  ],
+  "author": "JavaScript Cowboy",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "gh": ">=2.0.0"
+  }
+}

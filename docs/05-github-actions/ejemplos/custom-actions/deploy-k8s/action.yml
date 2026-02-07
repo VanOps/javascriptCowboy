@@ -1,0 +1,140 @@
+# =============================================
+# Composite Action: Deploy K8s
+# Archivo: .github/actions/deploy-k8s/action.yml
+# =============================================
+
+name: 'Deploy to Kubernetes'
+description: 'Despliega aplicación a Kubernetes usando Helm o kubectl'
+
+inputs:
+  cluster:
+    description: 'Nombre del cluster K8s (production, staging, dev)'
+    required: true
+  
+  image-tag:
+    description: 'Tag de la imagen Docker a desplegar'
+    required: true
+    default: 'latest'
+  
+  namespace:
+    description: 'Namespace de Kubernetes'
+    required: false
+    default: 'default'
+  
+  deployment-name:
+    description: 'Nombre del deployment en K8s'
+    required: false
+    default: 'mi-app'
+  
+  use-helm:
+    description: 'Usar Helm en vez de kubectl (true/false)'
+    required: false
+    default: 'false'
+
+outputs:
+  deployment-status:
+    description: 'Estado del deployment (success/failure)'
+    value: ${{ steps.deploy.outputs.status }}
+  
+  pod-count:
+    description: 'Número de pods corriendo'
+    value: ${{ steps.verify.outputs.pod-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: 🔍 Validar inputs
+      shell: bash
+      run: |
+        echo "🎯 Inputs recibidos:"
+        echo "  Cluster: ${{ inputs.cluster }}"
+        echo "  Image Tag: ${{ inputs.image-tag }}"
+        echo "  Namespace: ${{ inputs.namespace }}"
+        echo "  Deployment: ${{ inputs.deployment-name }}"
+        echo "  Use Helm: ${{ inputs.use-helm }}"
+
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+
+    - name: 🚀 Deploy con Node.js script
+      id: deploy
+      shell: bash
+      env:
+        CLUSTER: ${{ inputs.cluster }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
+        NAMESPACE: ${{ inputs.namespace }}
+        DEPLOYMENT_NAME: ${{ inputs.deployment-name }}
+        USE_HELM: ${{ inputs.use-helm }}
+        KUBECONFIG: ${{ env.KUBECONFIG }}
+      run: node ${{ github.action_path }}/deploy.js
+
+    - name: ✅ Verificar deployment
+      id: verify
+      shell: bash
+      run: |
+        echo "⏳ Esperando rollout..."
+        kubectl rollout status deployment/${{ inputs.deployment-name }} \
+          -n ${{ inputs.namespace }} \
+          --timeout=5m
+
+        POD_COUNT=$(kubectl get pods \
+          -n ${{ inputs.namespace }} \
+          -l app=${{ inputs.deployment-name }} \
+          --field-selector=status.phase=Running \
+          --no-headers | wc -l)
+
+        echo "pod-count=$POD_COUNT" >> $GITHUB_OUTPUT
+        echo "✅ Pods corriendo: $POD_COUNT"
+
+    - name: 📊 Deployment info
+      shell: bash
+      run: |
+        echo "### 🚀 Deployment Info" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Cluster**: ${{ inputs.cluster }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Namespace**: ${{ inputs.namespace }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Image**: ${{ inputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Pods**: ${{ steps.verify.outputs.pod-count }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        kubectl get deployment ${{ inputs.deployment-name }} \
+          -n ${{ inputs.namespace }} >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+# 🔍 CONCEPTOS DEMOSTRADOS:
+#
+# 1. Composite Action
+#    - Reutilizable en múltiples workflows
+#    - Inputs/outputs como una función
+#    - Empaqueta múltiples steps
+#
+# 2. Action inputs
+#    - required: true/false
+#    - default: valor por defecto
+#    - Acceso con ${{ inputs.nombre }}
+#
+# 3. Action outputs
+#    - steps.id.outputs.key
+#    - Exponer resultados al workflow
+#
+# 4. github.action_path
+#    - Ruta absoluta a la action
+#    - Permite importar scripts locales
+#
+# 5. Shell scripts en steps
+#    - shell: bash
+#    - run: comando
+#
+# USO EN WORKFLOW:
+#
+# - name: Deploy K8s
+#   uses: ./.github/actions/deploy-k8s
+#   with:
+#     cluster: production
+#     image-tag: ${{ github.sha }}
+#     namespace: default
+#     deployment-name: mi-app
+#     use-helm: true

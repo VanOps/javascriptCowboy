@@ -1,0 +1,105 @@
+{
+  "deployment": {
+    "environment": "production",
+    "application": "customer-portal",
+    "version": "v3.1.0",
+    "previousVersion": "v3.0.5",
+    "timestamp": "2026-02-07T15:45:00Z",
+    "deployedBy": "github-actions[bot]",
+    "strategy": "rolling-update"
+  },
+  "kubernetes": {
+    "cluster": "prod-us-east-1",
+    "namespace": "apps",
+    "deployment": "customer-portal",
+    "replicas": {
+      "desired": 10,
+      "current": 7,
+      "ready": 4,
+      "updated": 7
+    },
+    "conditions": [
+      {
+        "type": "Progressing",
+        "status": "True",
+        "reason": "ReplicaSetUpdated",
+        "message": "Updated replica set customer-portal-6b8f9d7c5 to 7 replicas"
+      },
+      {
+        "type": "Available",
+        "status": "False",
+        "reason": "MinimumReplicasUnavailable",
+        "message": "Deployment does not have minimum availability (4/10 ready)"
+      }
+    ]
+  },
+  "events": [
+    {
+      "time": "15:45:30",
+      "type": "Normal",
+      "reason": "ScalingReplicaSet",
+      "message": "Scaled up replica set customer-portal-6b8f9d7c5 to 3"
+    },
+    {
+      "time": "15:46:15",
+      "type": "Warning",
+      "reason": "FailedMount",
+      "message": "Unable to attach or mount volumes: unmounted volumes=[config-volume], unattached volumes=[kube-api-access-xyz config-volume]: timed out waiting for the condition"
+    },
+    {
+      "time": "15:47:00",
+      "type": "Warning",
+      "reason": "BackOff",
+      "message": "Back-off restarting failed container customer-portal in pod customer-portal-6b8f9d7c5-abc12"
+    },
+    {
+      "time": "15:47:30",
+      "type": "Warning",
+      "reason": "Unhealthy",
+      "message": "Readiness probe failed: HTTP probe failed with statuscode: 503"
+    }
+  ],
+  "podLogs": [
+    "[15:45:45] INFO: Application starting...",
+    "[15:45:46] INFO: Loading configuration from /app/config/production.yaml",
+    "[15:45:46] ERROR: Failed to load config: ENOENT: no such file or directory, open '/app/config/production.yaml'",
+    "[15:45:46] WARN: Falling back to environment variables",
+    "[15:45:47] INFO: Connecting to database: postgres://prod-db:5432/portal",
+    "[15:45:52] ERROR: Database connection timeout after 5000ms",
+    "[15:45:52] ERROR: Failed to initialize database pool",
+    "[15:45:53] INFO: Starting HTTP server on port 3000",
+    "[15:45:53] ERROR: Cannot start server: Database not initialized",
+    "[15:45:53] FATAL: Application startup failed",
+    "[15:45:53] Process exited with code 1"
+  ],
+  "healthChecks": {
+    "readiness": {
+      "path": "/health/ready",
+      "port": 3000,
+      "failureThreshold": 3,
+      "periodSeconds": 10,
+      "successCount": 0,
+      "failureCount": 12
+    },
+    "liveness": {
+      "path": "/health/live",
+      "port": 3000,
+      "failureThreshold": 3,
+      "periodSeconds": 10,
+      "successCount": 0,
+      "failureCount": 8
+    }
+  },
+  "metrics": {
+    "errorRate": "85%",
+    "requestLatency": "N/A (no successful requests)",
+    "cpuUsage": "12% (avg)",
+    "memoryUsage": "156Mi / 512Mi"
+  },
+  "rollback": {
+    "available": true,
+    "previousVersionStable": true,
+    "previousVersionUptime": "14 days"
+  },
+  "context": "Deploy de nueva versión v3.1.0 falló. Solo 4 de 10 réplicas están ready. Logs muestran error al cargar archivo de config que no existe y timeout de conexión a base de datos. Readiness probes fallando (12 fallos consecutivos). Versión anterior v3.0.5 era estable por 14 días. Deploy está a mitad de rolling update."
+}

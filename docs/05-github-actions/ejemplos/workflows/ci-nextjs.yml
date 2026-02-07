@@ -1,0 +1,148 @@
+# =============================================
+# CI Workflow para Next.js
+# Archivo: .github/workflows/ci-nextjs.yml
+# =============================================
+
+name: 🎯 Next.js CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: 20.x
+
+jobs:
+  # ═══════════════════════════════════════
+  # JOB 1: Lint + Test + Build
+  # ═══════════════════════════════════════
+  ci:
+    name: 🔍 CI - Lint, Test, Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🎨 Lint código
+        run: npm run lint
+
+      - name: 🧪 Run tests
+        run: npm test
+
+      - name: 🏗️ Build proyecto
+        run: npm run build
+
+      - name: 📊 Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next/
+          retention-days: 7
+
+  # ═══════════════════════════════════════
+  # JOB 2: Deploy (solo si CI pasa)
+  # ═══════════════════════════════════════
+  deploy:
+    name: 🚀 Deploy
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: .next/
+
+      # Deploy a Vercel (producción)
+      - name: 🚀 Deploy to Vercel (Production)
+        if: github.ref == 'refs/heads/main'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm install -g vercel
+          vercel --prod --token=$VERCEL_TOKEN --yes
+
+      # Deploy a staging
+      - name: ☁️ Deploy to Staging (Develop)
+        if: github.ref == 'refs/heads/develop'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm install -g vercel
+          vercel --token=$VERCEL_TOKEN --yes
+
+  # ═══════════════════════════════════════
+  # JOB 3: Notificación (siempre se ejecuta)
+  # ═══════════════════════════════════════
+  notify:
+    name: 📢 Notificar resultado
+    needs: [ci, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📊 Resultado del workflow
+        run: |
+          echo "CI Status: ${{ needs.ci.result }}"
+          echo "Deploy Status: ${{ needs.deploy.result }}"
+          
+          if [ "${{ needs.ci.result }}" == "failure" ]; then
+            echo "❌ CI falló - deployment bloqueado"
+            exit 1
+          fi
+
+# 🔍 CONCEPTOS DEMOSTRADOS:
+#
+# 1. Matrix Strategy (opcional)
+#    - Probar múltiples versiones de Node.js
+#    - strategy: matrix: node-version: [18.x, 20.x]
+#
+# 2. Artifacts
+#    - upload-artifact: Guardar build entre jobs
+#    - download-artifact: Reutilizar en deploy
+#
+# 3. Conditional execution
+#    - if: github.ref == 'refs/heads/main'
+#    - if: always() - ejecutar siempre
+#
+# 4. Job dependencies
+#    - needs: ci - deploy solo si CI pasa
+#
+# 5. Secrets
+#    - ${{ secrets.VERCEL_TOKEN }}
+#    - Configurar en repo Settings → Secrets
+#
+# SECRETS REQUERIDOS:
+# - VERCEL_TOKEN
+# - VERCEL_ORG_ID
+# - VERCEL_PROJECT_ID

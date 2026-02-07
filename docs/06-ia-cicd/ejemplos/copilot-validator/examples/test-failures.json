@@ -1,0 +1,108 @@
+{
+  "testRun": {
+    "framework": "Jest",
+    "project": "e-commerce-backend",
+    "timestamp": "2026-02-07T14:32:15Z",
+    "branch": "feature/payment-gateway",
+    "commit": "f7e8d9c6b5a4"
+  },
+  "summary": {
+    "totalTests": 187,
+    "passed": 179,
+    "failed": 8,
+    "skipped": 0,
+    "duration": "23.4s",
+    "coverage": {
+      "statements": 82.3,
+      "branches": 76.8,
+      "functions": 84.1,
+      "lines": 82.7
+    }
+  },
+  "failures": [
+    {
+      "suite": "PaymentService",
+      "test": "should process refund for canceled order",
+      "file": "src/services/payment.test.ts",
+      "line": 145,
+      "error": "TypeError: Cannot read property 'amount' of undefined",
+      "stack": [
+        "at PaymentService.processRefund (src/services/payment.ts:89:25)",
+        "at Object.<anonymous> (src/services/payment.test.ts:148:12)"
+      ]
+    },
+    {
+      "suite": "PaymentService",
+      "test": "should handle Stripe webhook timeout",
+      "file": "src/services/payment.test.ts",
+      "line": 223,
+      "error": "Error: Timeout of 5000ms exceeded",
+      "stack": []
+    },
+    {
+      "suite": "OrderController",
+      "test": "should validate order total matches items",
+      "file": "src/controllers/order.test.ts",
+      "line": 67,
+      "error": "AssertionError: expected 150.50 to equal 148.99",
+      "stack": [
+        "at Context.<anonymous> (src/controllers/order.test.ts:72:8)"
+      ]
+    },
+    {
+      "suite": "InventoryService",
+      "test": "should reserve stock atomically",
+      "file": "src/services/inventory.test.ts",
+      "line": 112,
+      "error": "Error: Race condition detected: stock oversold",
+      "stack": []
+    },
+    {
+      "suite": "EmailService",
+      "test": "should send confirmation email",
+      "file": "src/services/email.test.ts",
+      "line": 45,
+      "error": "Error: SMTP connection refused",
+      "stack": []
+    },
+    {
+      "suite": "EmailService",
+      "test": "should retry on transient failures",
+      "file": "src/services/email.test.ts",
+      "line": 89,
+      "error": "Error: Max retries exceeded (3)",
+      "stack": []
+    },
+    {
+      "suite": "CacheService",
+      "test": "should invalidate cache on update",
+      "file": "src/services/cache.test.ts",
+      "line": 134,
+      "error": "AssertionError: Cache not invalidated after update",
+      "stack": []
+    },
+    {
+      "suite": "AuthMiddleware",
+      "test": "should reject expired JWT tokens",
+      "file": "src/middleware/auth.test.ts",
+      "line": 78,
+      "error": "AssertionError: expected 401 to equal 403",
+      "stack": []
+    }
+  ],
+  "previousRuns": [
+    {
+      "commit": "a1b2c3d4e5f6",
+      "passed": 187,
+      "failed": 0,
+      "duration": "21.8s"
+    },
+    {
+      "commit": "z9y8x7w6v5u4",
+      "passed": 185,
+      "failed": 2,
+      "duration": "22.3s"
+    }
+  ],
+  "context": "Este test run tiene 8 fallos nuevos después de integrar nuevo payment gateway (Stripe). Los tests previos en main estaban pasando todos. Los fallos incluyen: undefined properties, timeouts, race conditions, y assertion mismatches. La cobertura bajó de 85% a 82%."
+}
