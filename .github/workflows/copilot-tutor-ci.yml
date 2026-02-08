@@ -1,0 +1,101 @@
+name: CI - Copilot Tutor
+
+# Se activa cuando hay cambios en copilot-tutor o en el workflow mismo
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tutor/copilot-tutor/**'
+      - '.github/workflows/copilot-tutor-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'tutor/copilot-tutor/**'
+      - '.github/workflows/copilot-tutor-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐳 Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔨 Build imagen Copilot Tutor
+        working-directory: tutor/copilot-tutor
+        run: |
+          docker build -t copilot-tutor:ci .
+
+      - name: 🚀 Levantar servicio
+        working-directory: tutor/copilot-tutor
+        env:
+          # Token fake para testing (el 403 es esperado, solo validamos que la app arranca)
+          GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN || 'ghp_fake_token_for_ci_testing' }}
+        run: |
+          # Crear .env temporal para CI
+          echo "GITHUB_TOKEN=${GITHUB_TOKEN}" > .env
+          
+          # Levantar con docker-compose
+          docker compose up -d
+          
+          # Esperar a que la app esté lista (max 60s)
+          echo "⏳ Esperando a que Copilot Tutor esté listo..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "✅ Copilot Tutor respondiendo"
+              break
+            fi
+            echo "   Intento $i/30..."
+            sleep 2
+          done
+
+      - name: 🧪 Pruebas de validación
+        run: |
+          # 1. Verificar que la página principal carga
+          echo "🔍 Test 1: Página principal"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Fallo: página principal devolvió $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Página principal OK (HTTP 200)"
+          
+          # 2. Verificar que el API route existe (puede fallar por falta de token, pero debe responder)
+          echo "🔍 Test 2: API endpoint existe"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"mensajes":[],"modulo":"general"}' \
+            http://localhost:3000/api/chat)
+          # Aceptamos 500 (error de token) o 200 - lo importante es que la ruta existe
+          if [ "$HTTP_CODE" != "500" ] && [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Fallo: API devolvió código inesperado $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ API route existe (HTTP $HTTP_CODE)"
+          
+          # 3. Verificar que los assets estáticos cargan
+          echo "🔍 Test 3: Assets Next.js"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/_next/static/chunks/webpack-*.js 2>/dev/null || echo "404")
+          # Los chunks de webpack deben existir
+          if [[ ! "$HTTP_CODE" =~ ^(200|304)$ ]]; then
+            echo "⚠️  Advertencia: Assets pueden no estar cargando correctamente"
+          else
+            echo "✅ Assets Next.js OK"
+          fi
+
+      - name: 📊 Mostrar logs si falla
+        if: failure()
+        working-directory: tutor/copilot-tutor
+        run: |
+          echo "📋 Logs de Copilot Tutor:"
+          docker compose logs
+
+      - name: 🧹 Limpiar recursos
+        if: always()
+        working-directory: tutor/copilot-tutor
+        run: |
+          docker compose down -v
+          rm -f .env

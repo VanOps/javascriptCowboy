@@ -1,0 +1,139 @@
+name: CI - Llama Tutor
+
+# Se activa cuando hay cambios en llama-tutor o en el workflow mismo
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'tutor/llama-tutor/**'
+      - '.github/workflows/llama-tutor-ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'tutor/llama-tutor/**'
+      - '.github/workflows/llama-tutor-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout código
+        uses: actions/checkout@v4
+
+      - name: 🐳 Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔨 Build imagen Llama Tutor
+        working-directory: tutor/llama-tutor
+        run: |
+          docker build -t llama-tutor:ci .
+
+      - name: 🦙 Levantar Ollama + Llama Tutor
+        working-directory: tutor/llama-tutor
+        run: |
+          # Levantar con docker-compose
+          docker compose up -d
+          
+          # Esperar a que Ollama descargue el modelo (puede tardar varios minutos en CI)
+          echo "⏳ Esperando a que Ollama descargue llama3.2 (esto puede tardar 3-5 min)..."
+          for i in {1..150}; do
+            if docker compose exec -T ollama ollama list 2>/dev/null | grep -q llama3.2; then
+              echo "✅ Modelo llama3.2 descargado"
+              break
+            fi
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "   Intento $i/150 ($(docker compose exec -T ollama ollama list 2>/dev/null | wc -l) modelos detectados)..."
+            fi
+            sleep 2
+          done
+          
+          # Esperar a que Llama Tutor esté listo
+          echo "⏳ Esperando a que Llama Tutor esté listo..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:3001 > /dev/null 2>&1; then
+              echo "✅ Llama Tutor respondiendo"
+              break
+            fi
+            echo "   Intento $i/30..."
+            sleep 2
+          done
+
+      - name: 🧪 Pruebas de validación
+        run: |
+          # 1. Verificar que la página principal carga
+          echo "🔍 Test 1: Página principal Llama Tutor"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Fallo: página principal devolvió $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Página principal OK (HTTP 200)"
+          
+          # 2. Verificar que Ollama está respondiendo
+          echo "🔍 Test 2: Ollama API"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:11434/api/tags)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Fallo: Ollama API devolvió $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Ollama API OK (HTTP 200)"
+          
+          # 3. Verificar que el modelo está disponible
+          echo "🔍 Test 3: Modelo llama3.2 disponible"
+          if ! curl -s http://localhost:11434/api/tags | grep -q "llama3.2"; then
+            echo "❌ Fallo: Modelo llama3.2 no encontrado"
+            curl -s http://localhost:11434/api/tags
+            exit 1
+          fi
+          echo "✅ Modelo llama3.2 disponible"
+          
+          # 4. Verificar health endpoint de Llama Tutor
+          echo "🔍 Test 4: Health endpoint"
+          HEALTH_RESPONSE=$(curl -s http://localhost:3001/api/health)
+          if ! echo "$HEALTH_RESPONSE" | grep -q '"disponible":true'; then
+            echo "❌ Fallo: Health check indica Ollama no disponible"
+            echo "Respuesta: $HEALTH_RESPONSE"
+            exit 1
+          fi
+          echo "✅ Health endpoint OK - Ollama disponible"
+          
+          # 5. Test de chat básico (puede tardar por inferencia)
+          echo "🔍 Test 5: Chat básico con LLM (puede tardar 30-60s)"
+          CHAT_RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -d '{
+              "mensajes": [{
+                "id": "test-1",
+                "rol": "usuario",
+                "contenido": "¿Qué es JavaScript?",
+                "timestamp": 1234567890
+              }],
+              "modulo": "general"
+            }' \
+            http://localhost:3001/api/chat)
+          
+          if echo "$CHAT_RESPONSE" | grep -q '"respuesta"'; then
+            RESPONSE_LENGTH=$(echo "$CHAT_RESPONSE" | jq -r '.respuesta' | wc -c)
+            echo "✅ Chat respondió correctamente ($RESPONSE_LENGTH chars)"
+          else
+            echo "❌ Fallo: Chat no devolvió respuesta válida"
+            echo "Respuesta: $CHAT_RESPONSE"
+            exit 1
+          fi
+
+      - name: 📊 Mostrar logs si falla
+        if: failure()
+        working-directory: tutor/llama-tutor
+        run: |
+          echo "📋 Logs de Llama Tutor:"
+          docker compose logs llama-tutor
+          echo ""
+          echo "📋 Logs de Ollama:"
+          docker compose logs ollama
+
+      - name: 🧹 Limpiar recursos
+        if: always()
+        working-directory: tutor/llama-tutor
+        run: |
+          docker compose down -v
