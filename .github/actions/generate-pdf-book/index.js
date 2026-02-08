@@ -92,30 +92,39 @@ async function buildFileList() {
 }
 
 /**
- * Descarga una imagen desde una URL
+ * Descarga una imagen desde una URL con seguimiento de redirecciones
  */
 async function downloadImage(url, filepath) {
   return new Promise((resolve, reject) => {
     const protocol = url.startsWith('https') ? https : http;
-    const file = require('fs').createWriteStream(filepath);
     
-    protocol.get(url, (response) => {
+    const handleResponse = (response) => {
+      // Manejar redirecciones
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        const redirectUrl = response.headers.location;
+        const redirectProtocol = redirectUrl.startsWith('https') ? https : http;
+        redirectProtocol.get(redirectUrl, handleResponse).on('error', reject);
+        return;
+      }
+      
       if (response.statusCode === 200) {
+        const file = require('fs').createWriteStream(filepath);
         response.pipe(file);
         file.on('finish', () => {
           file.close();
           resolve(filepath);
         });
+        file.on('error', (err) => {
+          file.close();
+          require('fs').unlink(filepath, () => {});
+          reject(err);
+        });
       } else {
-        file.close();
-        require('fs').unlink(filepath, () => {});
         reject(new Error(`HTTP ${response.statusCode}: ${url}`));
       }
-    }).on('error', (err) => {
-      file.close();
-      require('fs').unlink(filepath, () => {});
-      reject(err);
-    });
+    };
+    
+    protocol.get(url, handleResponse).on('error', reject);
   });
 }
 
@@ -141,17 +150,17 @@ async function sanitizeMarkdownForPDF(content) {
     const url = match[2];
     
     try {
-      // Generar nombre de archivo seguro
-      const ext = path.extname(new URL(url).pathname) || '.png';
-      const filename = `image-${i}${ext}`;
+      // Generar nombre de archivo seguro (solo números)
+      const ext = '.png'; // Siempre usar PNG para evitar problemas
+      const filename = `img-${String(i).padStart(3, '0')}${ext}`;
       const filepath = path.join(IMAGES_DIR, filename);
       
       // Descargar imagen
       await downloadImage(url, filepath);
       
-      // Reemplazar URL con ruta local
+      // Reemplazar URL con ruta local (sin caracteres especiales)
       sanitized = sanitized.replace(match[0], `![${altText}](${filepath})`);
-      core.info(`    ✓ Descargada: ${url}`);
+      core.info(`    ✓ Descargada: ${url} -> ${filename}`);
     } catch (error) {
       // Si falla la descarga, reemplazar con texto alternativo
       core.warning(`    ⚠️  Error descargando ${url}: ${error.message}`);
@@ -269,7 +278,7 @@ async function generatePDF() {
     BOOK_CONTENT_FILE,
     '-o', OUTPUT_FILE,
     '--pdf-engine=xelatex',
-    '--listings',
+    '--syntax-highlighting=idiomatic',
     '--toc',
     '--toc-depth=3',
     '--number-sections',
@@ -279,8 +288,7 @@ async function generatePDF() {
     '-V', 'toccolor=black',
     '-V', 'geometry:margin=2.5cm',
     '-V', 'mainfont=DejaVu Sans',
-    '-V', 'monofont=DejaVu Sans Mono',
-    '-V', 'listings-no-page-break=true'
+    '-V', 'monofont=DejaVu Sans Mono'
   ];
   
   await exec.exec('docker', pandocArgs);
