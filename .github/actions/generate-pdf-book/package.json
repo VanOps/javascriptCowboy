@@ -1,0 +1,15 @@
+{
+  "name": "generate-pdf-book-action",
+  "version": "1.0.0",
+  "description": "GitHub Action to generate PDF book from markdown files",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1"
+  },
+  "author": "JavaScript Cowboy",
+  "license": "MIT"
+}

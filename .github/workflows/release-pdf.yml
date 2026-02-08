@@ -1,0 +1,34 @@
+name: Generate PDF Book on Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  generate-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate PDF Book
+        uses: ./.github/actions/generate-pdf-book
+        with:
+          pandoc-version: '3.1.11'
+          output-file: 'javascript-cowboy-book.pdf'
+
+      - name: Upload PDF to Release
+        uses: softprops/action-gh-release@v1
+        if: github.event_name == 'release'
+        with:
+          files: javascript-cowboy-book.pdf
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload PDF as Artifact (for manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: javascript-cowboy-book
+          path: javascript-cowboy-book.pdf

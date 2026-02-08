@@ -1,0 +1,44 @@
+name: 'Generate PDF Book'
+description: 'Generates a PDF book from markdown files with Mermaid diagram support'
+author: 'JavaScript Cowboy'
+
+inputs:
+  pandoc-version:
+    description: 'Pandoc Docker image version'
+    required: false
+    default: '3.1.11'
+  output-file:
+    description: 'Output PDF filename'
+    required: false
+    default: 'javascript-cowboy-book.pdf'
+
+outputs:
+  pdf-path:
+    description: 'Path to the generated PDF file'
+    value: ${{ steps.generate.outputs.pdf-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js for action
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install action dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci
+
+    - name: Install Mermaid CLI
+      shell: bash
+      run: npm install -g @mermaid-js/mermaid-cli
+
+    - name: Generate PDF
+      id: generate
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        PANDOC_VERSION: ${{ inputs.pandoc-version }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+      run: node ${{ github.action_path }}/index.js
