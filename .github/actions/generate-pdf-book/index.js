@@ -143,11 +143,18 @@ async function convertMermaidDiagrams(content) {
     
     // Convertir a PNG
     try {
+      // Crear archivo de configuración de puppeteer
+      const puppeteerConfig = {
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      };
+      const configFile = path.join(MERMAID_DIR, `puppeteer-config-${i}.json`);
+      await fs.writeFile(configFile, JSON.stringify(puppeteerConfig));
+      
       await exec.exec('mmdc', [
         '-i', mmdFile,
         '-o', pngFile,
         '-b', 'transparent',
-        '--puppeteer-args', '[{"args": ["--no-sandbox"]}]'
+        '-p', configFile
       ]);
       
       // Reemplazar en contenido
