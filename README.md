@@ -95,14 +95,15 @@ flowchart TD
 
 ## 🤖 Tutores Interactivos (Método Socrático con IA)
 
-Incluye dos aplicaciones Next.js para practicar con chat socrático en [`tutor/`](tutor/):
+Incluye tres aplicaciones Next.js para practicar con chat socrático en [`tutor/`](tutor/):
 
 | Tutor | Tecnología | Puerto | Comando |
 |-------|-----------|--------|---------|
 | 🤠 **Copilot Tutor** | GitHub Copilot API | `:3000` | `cd tutor/copilot-tutor && docker compose up -d` |
 | 🦙 **Llama Tutor** | Ollama (LLM local, sin APIs) | `:3001` | `cd tutor/llama-tutor && docker compose up -d` |
+| 🔌 **MCP Tutor** | MCP + GitHub Copilot | `:3002` | `cd tutor/mcp-tutor && docker compose up -d` |
 
-Ambos tutores usan el mismo enfoque pedagógico: **nunca dan la respuesta directa**, te guían con preguntas para que entiendas el concepto por ti mismo.
+Los tres tutores usan el mismo enfoque pedagógico: **nunca dan la respuesta directa**, te guían con preguntas para que entiendas el concepto por ti mismo.
 
 ---
 
