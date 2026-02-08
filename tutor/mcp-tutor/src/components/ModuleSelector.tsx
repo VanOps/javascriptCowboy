@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { MODULOS, type ModuloId } from '@/lib/mcp';
+import { MODULOS, type ModuloId } from "@/lib/mcp";
 
 interface Props {
   moduloActual: ModuloId;
@@ -21,9 +21,10 @@ export default function ModuleSelector({ moduloActual, onChange }: Props) {
           title={mod.descripcion}
           className={`
             px-3 py-1.5 rounded-full text-sm font-medium transition-all
-            ${moduloActual === mod.id
-              ? 'bg-cowboy-leather text-white shadow-lg shadow-cowboy-leather/30'
-              : 'bg-cowboy-panel text-cowboy-text border border-cowboy-border hover:border-cowboy-leather'
+            ${
+              moduloActual === mod.id
+                ? "bg-cowboy-leather text-white shadow-lg shadow-cowboy-leather/30"
+                : "bg-cowboy-panel text-cowboy-text border border-cowboy-border hover:border-cowboy-leather"
             }
           `}
         >

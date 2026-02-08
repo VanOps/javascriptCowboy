@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import type { Mensaje, ModuloId } from '@/lib/mcp';
-import MessageBubble from './MessageBubble';
-import ModuleSelector from './ModuleSelector';
+import { useState, useRef, useEffect } from "react";
+import type { Mensaje, ModuloId } from "@/lib/mcp";
+import MessageBubble from "./MessageBubble";
+import ModuleSelector from "./ModuleSelector";
 
 /**
  * Ventana de chat principal.
@@ -11,16 +11,19 @@ import ModuleSelector from './ModuleSelector';
  */
 export default function ChatWindow() {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [modulo, setModulo] = useState<ModuloId>('general');
+  const [modulo, setModulo] = useState<ModuloId>("general");
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll al último mensaje
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [mensajes]);
 
   // Focus en el input al cargar
@@ -45,21 +48,21 @@ export default function ChatWindow() {
     // Agregar mensaje del usuario
     const mensajeUsuario: Mensaje = {
       id: crypto.randomUUID(),
-      rol: 'usuario',
+      rol: "usuario",
       contenido: texto,
       timestamp: Date.now(),
     };
 
     const nuevosMensajes = [...mensajes, mensajeUsuario];
     setMensajes(nuevosMensajes);
-    setInput('');
+    setInput("");
     setCargando(true);
 
     try {
       // Llamar a nuestro API route (protege el token)
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mensajes: nuevosMensajes, modulo }),
       });
 
@@ -70,14 +73,14 @@ export default function ChatWindow() {
       // Agregar respuesta del tutor
       const mensajeAsistente: Mensaje = {
         id: crypto.randomUUID(),
-        rol: 'asistente',
+        rol: "asistente",
         contenido: data.respuesta,
         timestamp: Date.now(),
       };
 
       setMensajes((prev) => [...prev, mensajeAsistente]);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error de conexión';
+      const msg = err instanceof Error ? err.message : "Error de conexión";
       setError(msg);
     } finally {
       setCargando(false);
@@ -87,7 +90,7 @@ export default function ChatWindow() {
 
   // Enviar con Enter (Shift+Enter para salto de línea)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       enviar();
     }
@@ -113,18 +116,22 @@ export default function ChatWindow() {
               ¡Howdy, Cowboy!
             </h2>
             <p className="text-sm max-w-md mx-auto">
-              Soy tu tutor socrático conectado vía MCP. No te daré respuestas directas —
-              te haré pensar. Pregúntame sobre cualquier concepto del curso.
+              Soy tu tutor socrático conectado vía MCP. No te daré respuestas
+              directas — te haré pensar. Pregúntame sobre cualquier concepto del
+              curso.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {[
-                '¿Qué es un closure?',
-                '¿Por qué Next.js usa Server Components?',
-                '¿Cómo funciona async/await?',
+                "¿Qué es un closure?",
+                "¿Por qué Next.js usa Server Components?",
+                "¿Cómo funciona async/await?",
               ].map((sugerencia) => (
                 <button
                   key={sugerencia}
-                  onClick={() => { setInput(sugerencia); inputRef.current?.focus(); }}
+                  onClick={() => {
+                    setInput(sugerencia);
+                    inputRef.current?.focus();
+                  }}
                   className="text-xs px-3 py-1.5 bg-cowboy-panel border border-cowboy-border rounded-full hover:border-cowboy-leather transition-colors"
                 >
                   {sugerencia}
@@ -144,7 +151,9 @@ export default function ChatWindow() {
           <div className="flex justify-start mb-4">
             <div className="bg-cowboy-panel border border-cowboy-border rounded-2xl rounded-bl-md px-4 py-3">
               <span className="text-xs text-cowboy-leather">🤖 Tutor</span>
-              <p className="typing-cursor text-sm text-cowboy-text mt-1">Pensando</p>
+              <p className="typing-cursor text-sm text-cowboy-text mt-1">
+                Pensando
+              </p>
             </div>
           </div>
         )}
@@ -174,7 +183,7 @@ export default function ChatWindow() {
           disabled={cargando || !input.trim()}
           className="px-6 bg-cowboy-green hover:bg-green-600 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors"
         >
-          {cargando ? '⏳' : '🚀'}
+          {cargando ? "⏳" : "🚀"}
         </button>
       </div>
     </div>

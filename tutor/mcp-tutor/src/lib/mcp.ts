@@ -135,9 +135,7 @@ export async function llamarMCP(
       }),
     });
 
-    console.log(
-      `${TAG}    Status: ${response.status} ${response.statusText}`,
-    );
+    console.log(`${TAG}    Status: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const errorBody = await response.text();

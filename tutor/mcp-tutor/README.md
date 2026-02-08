@@ -69,6 +69,7 @@ GITHUB_TOKEN=ghp_tuTokenAquí
 4. **Piensa y responde** — cuando aciertes, ampliará el tema
 
 Preguntas de ejemplo:
+
 - "¿Qué es un closure en JavaScript?"
 - "¿Por qué Next.js usa Server Components?"
 - "¿Cómo funciona el event loop?"
@@ -104,6 +105,7 @@ mcp-tutor/
 - Respuestas coherentes con enfoque pedagógico socrático
 
 Este enfoque permite:
+
 - ✅ Funcionar con cualquier GitHub PAT (no requiere Copilot Business)
 - ✅ Comunicación estandardizada y predecible
 - ✅ Fácil migración a otros backends LLM
@@ -111,12 +113,63 @@ Este enfoque permite:
 
 ## 🤝 Comparativa con Otros Tutores
 
-| Tutor            | Backend                      | Puerto | Descripción                              |
-|------------------|------------------------------|--------|------------------------------------------|
-| **copilot-tutor** | GitHub Copilot API          | 3000   | API directa de Copilot (requiere Copilot Business) o fallback a GitHub Models |
-| **llama-tutor**   | Ollama local (Llama)        | 3001   | LLM local 100% offline, sin APIs externas |
-| **mcp-tutor**     | GitHub Models API           | 3002   | Arquitectura MCP con GitHub Models (funciona con PAT gratuito) |
+| Tutor             | Backend              | Puerto | Descripción                                                                   |
+| ----------------- | -------------------- | ------ | ----------------------------------------------------------------------------- |
+| **copilot-tutor** | GitHub Copilot API   | 3000   | API directa de Copilot (requiere Copilot Business) o fallback a GitHub Models |
+| **llama-tutor**   | Ollama local (Llama) | 3001   | LLM local 100% offline, sin APIs externas                                     |
+| **mcp-tutor**     | GitHub Models API    | 3002   | Arquitectura MCP con GitHub Models (funciona con PAT gratuito)                |
 
-## 📝 Licencia
+## � CI/CD — Validación Continua
+
+Este tutor incluye validación automática con GitHub Actions:
+
+### Workflow: [`mcp-tutor-ci.yml`](../../.github/workflows/mcp-tutor-ci.yml)
+
+**Se ejecuta cuando**:
+
+- Haces push a `main` o `develop` con cambios en `tutor/mcp-tutor/**`
+- Creas un PR que modifica archivos del MCP Tutor
+
+**Qué valida**:
+
+1. ✅ **Build Docker**: Imagen se construye sin errores
+2. ✅ **Servicio arranca**: Contenedor levanta y responde en puerto 3002
+3. ✅ **HTTP 200**: Página principal carga correctamente
+4. ✅ **API endpoint**: `/api/chat` existe y responde (200 o 500)
+5. ✅ **HTML válido**: Contiene elementos esperados ("MCP Tutor", "JavaScript Cowboy")
+
+### Ejecutar validación localmente:
+
+```bash
+cd tutor/mcp-tutor
+
+# 1. Build
+docker build -t mcp-tutor:local .
+
+# 2. Levantar (necesita .env con GITHUB_TOKEN)
+docker compose up -d
+
+# 3. Test página principal
+curl -I http://localhost:3002
+
+# 4. Test API endpoint
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"mensajes":[],"modulo":"general"}' \
+  http://localhost:3002/api/chat
+
+# 5. Ver logs
+docker compose logs -f
+
+# 6. Cleanup
+docker compose down -v
+```
+
+### Status del CI:
+
+![CI Status](../../.github/workflows/mcp-tutor-ci.yml/badge.svg)
+
+Ver logs completos en [Actions tab](../../actions).
+
+## �📝 Licencia
 
 MIT — Parte del curso JavaScript Cowboy
