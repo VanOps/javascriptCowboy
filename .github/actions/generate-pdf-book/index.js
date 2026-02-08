@@ -88,6 +88,25 @@ async function buildFileList() {
   return fileList;
 }
 
+/**
+ * Elimina imágenes externas (URLs) que Pandoc no puede procesar
+ */
+function sanitizeMarkdownForPDF(content) {
+  // Eliminar badges de shields.io y otras imágenes externas
+  const sanitized = content.replace(
+    /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g,
+    (match, altText, url) => {
+      // Si es una imagen local, mantenerla
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return match;
+      }
+      // Reemplazar imágenes externas con texto alternativo
+      return altText ? `*${altText}*` : '';
+    }
+  );
+  return sanitized;
+}
+
 async function consolidateMarkdown() {
   core.info('📝 Consolidando archivos markdown...');
   
@@ -106,6 +125,9 @@ async function consolidateMarkdown() {
       core.warning(`  ⚠️  No se pudo leer ${file}: ${error.message}`);
     }
   }
+  
+  // Sanitizar contenido para PDF (eliminar imágenes externas)
+  content = sanitizeMarkdownForPDF(content);
   
   await fs.writeFile(BOOK_CONTENT_FILE, content);
   core.info(`✓ Consolidado en ${BOOK_CONTENT_FILE}`);
