@@ -12,14 +12,12 @@ const MERMAID_DIR = 'mermaid-images';
 // Estructura de módulos (orden de aparición en el libro)
 const MODULE_STRUCTURE = [
   { type: 'file', path: 'README.md' },
-  { type: 'file', path: '1-Intro.md' },
   { type: 'module', path: 'docs/01-entorno-y-herramientas' },
   { type: 'module', path: 'docs/02-javascript-fundamentos' },
   { type: 'module', path: 'docs/03-javascript-avanzado' },
   { type: 'module', path: 'docs/04-react-nextjs' },
   { type: 'module', path: 'docs/05-github-actions' },
-  { type: 'module', path: 'docs/06-ia-cicd' },
-  { type: 'file', path: '6-GithubActions.md' }
+  { type: 'module', path: 'docs/06-ia-cicd' }
 ];
 
 // Metadatos YAML para el PDF
@@ -148,7 +146,8 @@ async function convertMermaidDiagrams(content) {
       await exec.exec('mmdc', [
         '-i', mmdFile,
         '-o', pngFile,
-        '-b', 'transparent'
+        '-b', 'transparent',
+        '--puppeteer-args', '[{"args": ["--no-sandbox"]}]'
       ]);
       
       // Reemplazar en contenido
