@@ -30,6 +30,10 @@ runs:
       working-directory: ${{ github.action_path }}
       run: npm ci
 
+    - name: Install SVG to PNG converter
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
+
     - name: Install Mermaid CLI
       shell: bash
       run: |

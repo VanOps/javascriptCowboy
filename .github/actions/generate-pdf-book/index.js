@@ -92,14 +92,15 @@ async function buildFileList() {
 }
 
 /**
- * Descarga una imagen desde una URL con seguimiento de redirecciones
+ * Descarga una imagen desde una URL
  */
 async function downloadImage(url, filepath) {
   return new Promise((resolve, reject) => {
     const protocol = url.startsWith('https') ? https : http;
+    const file = require('fs').createWriteStream(filepath);
     
     const handleResponse = (response) => {
-      // Manejar redirecciones
+      // Seguir redirecciones
       if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
         const redirectUrl = response.headers.location;
         const redirectProtocol = redirectUrl.startsWith('https') ? https : http;
@@ -108,7 +109,6 @@ async function downloadImage(url, filepath) {
       }
       
       if (response.statusCode === 200) {
-        const file = require('fs').createWriteStream(filepath);
         response.pipe(file);
         file.on('finish', () => {
           file.close();
@@ -120,6 +120,8 @@ async function downloadImage(url, filepath) {
           reject(err);
         });
       } else {
+        file.close();
+        require('fs').unlink(filepath, () => {});
         reject(new Error(`HTTP ${response.statusCode}: ${url}`));
       }
     };
@@ -129,7 +131,28 @@ async function downloadImage(url, filepath) {
 }
 
 /**
- * Procesa y descarga imágenes externas, elimina emojis
+ * Convierte SVG a PNG usando rsvg-convert
+ */
+async function convertSvgToPng(svgPath, pngPath) {
+  try {
+    await exec.exec('rsvg-convert', [
+      svgPath,
+      '-o', pngPath,
+      '-w', '800',  // Ancho de 800px
+      '-b', 'white'  // Fondo blanco
+    ]);
+    return true;
+  } catch (error) {
+    core.warning(`Error convirtiendo SVG a PNG: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Descarga imágenes externas y convierte SVG a PNG
+ */
+/**
+ * Descarga imágenes externas y convierte SVG a PNG
  */
 async function sanitizeMarkdownForPDF(content) {
   let sanitized = content;
@@ -141,31 +164,46 @@ async function sanitizeMarkdownForPDF(content) {
   const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g;
   const matches = [...sanitized.matchAll(imagePattern)];
   
-  core.info(`  Encontradas ${matches.length} imágenes externas`);
-  
-  // Descargar cada imagen
-  for (let i = 0; i < matches.length; i++) {
-    const match = matches[i];
-    const altText = match[1];
-    const url = match[2];
+  if (matches.length > 0) {
+    core.info(`  Encontradas ${matches.length} imágenes externas`);
     
-    try {
-      // Generar nombre de archivo seguro (solo números)
-      const ext = '.png'; // Siempre usar PNG para evitar problemas
-      const filename = `img-${String(i).padStart(3, '0')}${ext}`;
-      const filepath = path.join(IMAGES_DIR, filename);
+    // Procesar cada imagen
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const altText = match[1];
+      const url = match[2];
       
-      // Descargar imagen
-      await downloadImage(url, filepath);
-      
-      // Usar ruta relativa para el markdown (importante para Docker)
-      const relativeImagePath = `${IMAGES_DIR}/${filename}`;
-      sanitized = sanitized.replace(match[0], `![${altText}](${relativeImagePath})`);
-      core.info(`    ✓ Descargada: ${url} -> ${filename}`);
-    } catch (error) {
-      // Si falla la descarga, reemplazar con texto alternativo
-      core.warning(`    ⚠️  Error descargando ${url}: ${error.message}`);
-      sanitized = sanitized.replace(match[0], altText ? `*${altText}*` : '');
+      try {
+        // Nombres de archivo
+        const svgFilename = `img-${String(i).padStart(3, '0')}.svg`;
+        const pngFilename = `img-${String(i).padStart(3, '0')}.png`;
+        const svgPath = path.join(IMAGES_DIR, svgFilename);
+        const pngPath = path.join(IMAGES_DIR, pngFilename);
+        
+        // Descargar imagen
+        await downloadImage(url, svgPath);
+        core.info(`    ✓ Descargada: ${svgFilename}`);
+        
+        // Convertir SVG a PNG
+        const converted = await convertSvgToPng(svgPath, pngPath);
+        
+        if (converted) {
+          // Usar la imagen PNG convertida
+          const relativeImagePath = `${IMAGES_DIR}/${pngFilename}`;
+          sanitized = sanitized.replace(match[0], `![${altText}](${relativeImagePath})`);
+          core.info(`    ✓ Convertida: ${pngFilename}`);
+          
+          // Eliminar SVG original
+          await fs.unlink(svgPath).catch(() => {});
+        } else {
+          // Si la conversión falla, usar texto alternativo
+          sanitized = sanitized.replace(match[0], altText ? `**${altText}**` : '');
+        }
+      } catch (error) {
+        // Si falla la descarga, reemplazar con texto alternativo
+        core.warning(`    ⚠️  Error procesando ${url}: ${error.message}`);
+        sanitized = sanitized.replace(match[0], altText ? `**${altText}**` : '');
+      }
     }
   }
   
@@ -196,7 +234,7 @@ async function consolidateMarkdown() {
     }
   }
   
-  // Sanitizar contenido para PDF (descargar imágenes externas y eliminar emojis)
+  // Sanitizar contenido para PDF (descargar y convertir imágenes)
   core.info('🖼️  Procesando imágenes externas...');
   content = await sanitizeMarkdownForPDF(content);
   
