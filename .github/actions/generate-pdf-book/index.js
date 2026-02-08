@@ -207,6 +207,14 @@ async function sanitizeMarkdownForPDF(content) {
     }
   }
   
+  // Reemplazar caracteres Unicode problemáticos para LaTeX
+  sanitized = sanitized.replace(/→/g, '->');  // Flecha derecha
+  sanitized = sanitized.replace(/←/g, '<-');  // Flecha izquierda
+  sanitized = sanitized.replace(/↔/g, '<->'); // Flecha bidireccional
+  sanitized = sanitized.replace(/⇒/g, '=>');  // Flecha doble derecha
+  sanitized = sanitized.replace(/⇐/g, '<=');  // Flecha doble izquierda
+  sanitized = sanitized.replace(/…/g, '...'); // Elipsis
+  
   // Eliminar emojis (caracteres Unicode fuera del rango ASCII extendido)
   sanitized = sanitized.replace(/[\u{1F300}-\u{1F9FF}]/gu, '');
   sanitized = sanitized.replace(/[\u{2600}-\u{26FF}]/gu, '');
