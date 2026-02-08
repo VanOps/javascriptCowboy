@@ -1,6 +1,12 @@
 name: Generate PDF Book on Release
 
 on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '**.md'
+      - '.github/actions/generate-pdf-book/**'
+      - '.github/workflows/release-pdf.yml'
   release:
     types: [published]
   workflow_dispatch:
@@ -32,3 +38,4 @@ jobs:
         with:
           name: javascript-cowboy-book
           path: javascript-cowboy-book.pdf
+          retention-days: 1

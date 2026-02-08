@@ -158,8 +158,9 @@ async function sanitizeMarkdownForPDF(content) {
       // Descargar imagen
       await downloadImage(url, filepath);
       
-      // Reemplazar URL con ruta local (sin caracteres especiales)
-      sanitized = sanitized.replace(match[0], `![${altText}](${filepath})`);
+      // Usar ruta relativa para el markdown (importante para Docker)
+      const relativeImagePath = `${IMAGES_DIR}/${filename}`;
+      sanitized = sanitized.replace(match[0], `![${altText}](${relativeImagePath})`);
       core.info(`    ✓ Descargada: ${url} -> ${filename}`);
     } catch (error) {
       // Si falla la descarga, reemplazar con texto alternativo
