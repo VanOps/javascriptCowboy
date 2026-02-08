@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
     // Leer configuración de entorno
     const ollamaUrl = process.env.OLLAMA_URL ?? 'http://ollama:11434';
-    const modelo = process.env.OLLAMA_MODEL ?? 'llama3.2:3b';
+    const modelo = process.env.OLLAMA_MODEL ?? 'llama3.2';
 
     console.log(`[api/chat] Petición recibida — módulo: ${modulo}, mensajes: ${mensajes.length}`);
 

@@ -7,7 +7,7 @@ import { verificarOllama } from '@/lib/ollama';
  */
 export async function GET() {
   const ollamaUrl = process.env.OLLAMA_URL ?? 'http://ollama:11434';
-  const modelo = process.env.OLLAMA_MODEL ?? 'llama3.2:3b';
+  const modelo = process.env.OLLAMA_MODEL ?? 'llama3.2';
 
   const status = await verificarOllama(ollamaUrl, modelo);
 
