@@ -2,12 +2,15 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const fs = require('fs').promises;
 const path = require('path');
+const https = require('https');
+const http = require('http');
 
 // Configuración
 const PANDOC_VERSION = process.env.PANDOC_VERSION || '3.1.11';
 const OUTPUT_FILE = process.env.OUTPUT_FILE || 'javascript-cowboy-book.pdf';
 const BOOK_CONTENT_FILE = 'book-content.md';
 const MERMAID_DIR = 'mermaid-images';
+const IMAGES_DIR = 'downloaded-images';
 
 // Estructura de módulos (orden de aparición en el libro)
 const MODULE_STRUCTURE = [
@@ -89,23 +92,72 @@ async function buildFileList() {
 }
 
 /**
- * Elimina imágenes externas (URLs) y emojis que Pandoc no puede procesar
+ * Descarga una imagen desde una URL
  */
-function sanitizeMarkdownForPDF(content) {
+async function downloadImage(url, filepath) {
+  return new Promise((resolve, reject) => {
+    const protocol = url.startsWith('https') ? https : http;
+    const file = require('fs').createWriteStream(filepath);
+    
+    protocol.get(url, (response) => {
+      if (response.statusCode === 200) {
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          resolve(filepath);
+        });
+      } else {
+        file.close();
+        require('fs').unlink(filepath, () => {});
+        reject(new Error(`HTTP ${response.statusCode}: ${url}`));
+      }
+    }).on('error', (err) => {
+      file.close();
+      require('fs').unlink(filepath, () => {});
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Procesa y descarga imágenes externas, elimina emojis
+ */
+async function sanitizeMarkdownForPDF(content) {
   let sanitized = content;
   
-  // Eliminar badges de shields.io y otras imágenes externas
-  sanitized = sanitized.replace(
-    /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g,
-    (match, altText, url) => {
-      // Si es una imagen local, mantenerla
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        return match;
-      }
-      // Reemplazar imágenes externas con texto alternativo
-      return altText ? `*${altText}*` : '';
+  // Crear directorio para imágenes descargadas
+  await fs.mkdir(IMAGES_DIR, { recursive: true });
+  
+  // Encontrar todas las imágenes externas
+  const imagePattern = /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g;
+  const matches = [...sanitized.matchAll(imagePattern)];
+  
+  core.info(`  Encontradas ${matches.length} imágenes externas`);
+  
+  // Descargar cada imagen
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const altText = match[1];
+    const url = match[2];
+    
+    try {
+      // Generar nombre de archivo seguro
+      const ext = path.extname(new URL(url).pathname) || '.png';
+      const filename = `image-${i}${ext}`;
+      const filepath = path.join(IMAGES_DIR, filename);
+      
+      // Descargar imagen
+      await downloadImage(url, filepath);
+      
+      // Reemplazar URL con ruta local
+      sanitized = sanitized.replace(match[0], `![${altText}](${filepath})`);
+      core.info(`    ✓ Descargada: ${url}`);
+    } catch (error) {
+      // Si falla la descarga, reemplazar con texto alternativo
+      core.warning(`    ⚠️  Error descargando ${url}: ${error.message}`);
+      sanitized = sanitized.replace(match[0], altText ? `*${altText}*` : '');
     }
-  );
+  }
   
   // Eliminar emojis (caracteres Unicode fuera del rango ASCII extendido)
   sanitized = sanitized.replace(/[\u{1F300}-\u{1F9FF}]/gu, '');
@@ -134,8 +186,9 @@ async function consolidateMarkdown() {
     }
   }
   
-  // Sanitizar contenido para PDF (eliminar imágenes externas)
-  content = sanitizeMarkdownForPDF(content);
+  // Sanitizar contenido para PDF (descargar imágenes externas y eliminar emojis)
+  core.info('🖼️  Procesando imágenes externas...');
+  content = await sanitizeMarkdownForPDF(content);
   
   await fs.writeFile(BOOK_CONTENT_FILE, content);
   core.info(`✓ Consolidado en ${BOOK_CONTENT_FILE}`);
@@ -241,6 +294,7 @@ async function cleanup() {
   try {
     await fs.unlink(BOOK_CONTENT_FILE);
     await fs.rm(MERMAID_DIR, { recursive: true, force: true });
+    await fs.rm(IMAGES_DIR, { recursive: true, force: true });
     core.info('✓ Limpieza completada');
   } catch (error) {
     core.warning(`Advertencia durante limpieza: ${error.message}`);
