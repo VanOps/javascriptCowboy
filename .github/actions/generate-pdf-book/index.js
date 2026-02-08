@@ -280,6 +280,7 @@ async function generatePDF() {
     '-o', OUTPUT_FILE,
     '--pdf-engine=xelatex',
     '--syntax-highlighting=idiomatic',
+    '--resource-path=.:/data',
     '--toc',
     '--toc-depth=3',
     '--number-sections',
