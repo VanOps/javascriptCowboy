@@ -89,11 +89,13 @@ async function buildFileList() {
 }
 
 /**
- * Elimina imágenes externas (URLs) que Pandoc no puede procesar
+ * Elimina imágenes externas (URLs) y emojis que Pandoc no puede procesar
  */
 function sanitizeMarkdownForPDF(content) {
+  let sanitized = content;
+  
   // Eliminar badges de shields.io y otras imágenes externas
-  const sanitized = content.replace(
+  sanitized = sanitized.replace(
     /!\[([^\]]*)\]\((https?:\/\/[^\)]+)\)/g,
     (match, altText, url) => {
       // Si es una imagen local, mantenerla
@@ -104,6 +106,12 @@ function sanitizeMarkdownForPDF(content) {
       return altText ? `*${altText}*` : '';
     }
   );
+  
+  // Eliminar emojis (caracteres Unicode fuera del rango ASCII extendido)
+  sanitized = sanitized.replace(/[\u{1F300}-\u{1F9FF}]/gu, '');
+  sanitized = sanitized.replace(/[\u{2600}-\u{26FF}]/gu, '');
+  sanitized = sanitized.replace(/[\u{2700}-\u{27BF}]/gu, '');
+  
   return sanitized;
 }
 
@@ -208,7 +216,7 @@ async function generatePDF() {
     BOOK_CONTENT_FILE,
     '-o', OUTPUT_FILE,
     '--pdf-engine=xelatex',
-    '--highlight-style=tango',
+    '--listings',
     '--toc',
     '--toc-depth=3',
     '--number-sections',
@@ -218,7 +226,8 @@ async function generatePDF() {
     '-V', 'toccolor=black',
     '-V', 'geometry:margin=2.5cm',
     '-V', 'mainfont=DejaVu Sans',
-    '-V', 'monofont=DejaVu Sans Mono'
+    '-V', 'monofont=DejaVu Sans Mono',
+    '-V', 'listings-no-page-break=true'
   ];
   
   await exec.exec('docker', pandocArgs);
