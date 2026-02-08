@@ -1,10 +1,12 @@
 services:
-  copilot-tutor:
+  mcp-tutor:
     build: .
     ports:
-      - "3000:3000"
+      - "3002:3002"
     env_file:
       - .env
+    environment:
+      - PORT=3002
     dns:
       - 8.8.8.8
       - 8.8.4.4

@@ -1,6 +1,6 @@
 # Módulo 01 — Entorno y Herramientas
 
-> 🤔 *¿Por qué un DevOps que ya domina terminales, contenedores y pipelines necesita instalar algo nuevo para aprender JavaScript?*
+> 🤔 _¿Por qué un DevOps que ya domina terminales, contenedores y pipelines necesita instalar algo nuevo para aprender JavaScript?_
 
 ## Objetivo
 
@@ -10,10 +10,33 @@ Preparar tu estación de trabajo para todo el curso: instalar Node.js, configura
 
 ## Contenido
 
-| # | Lección | Descripción |
-|---|---------|-------------|
-| 1 | [Instalación de Node.js](01-instalacion-nodejs.md) | Instalar Node 22 LTS en Debian/WSL, verificar npm, REPL |
-| 2 | [Configuración de VS Code](02-configuracion-vscode.md) | Instalar VS Code, extensiones esenciales, settings.json |
+| #   | Lección                                                | Descripción                                             |
+| --- | ------------------------------------------------------ | ------------------------------------------------------- |
+| 1   | [Instalación de Node.js](01-instalacion-nodejs.md)     | Instalar Node 22 LTS en Debian/WSL, verificar npm, REPL |
+| 2   | [Configuración de VS Code](02-configuracion-vscode.md) | Instalar VS Code, extensiones esenciales, settings.json |
+| 3   | [Chat con Copilot](03-chat-copilot.md)                 | Configurar GitHub Copilot Chat para el curso            |
+
+---
+
+## 🤖 Tutores Interactivos Incluidos
+
+El curso incluye **tres tutores socrático-educativos** con IA en [`tutor/`](../../tutor/):
+
+| Tutor                                              | Backend                | Puerto | Comando                                          | CI Status                                                     |
+| -------------------------------------------------- | ---------------------- | ------ | ------------------------------------------------ | ------------------------------------------------------------- |
+| 🤠 **[Copilot Tutor](../../tutor/copilot-tutor/)** | GitHub Copilot API     | 3000   | `cd tutor/copilot-tutor && docker compose up -d` | ![CI](../../.github/workflows/copilot-tutor-ci.yml/badge.svg) |
+| 🦙 **[Llama Tutor](../../tutor/llama-tutor/)**     | Ollama local (offline) | 3001   | `cd tutor/llama-tutor && docker compose up -d`   | ![CI](../../.github/workflows/llama-tutor-ci.yml/badge.svg)   |
+| 🔌 **[MCP Tutor](../../tutor/mcp-tutor/)**         | GitHub Models API      | 3002   | `cd tutor/mcp-tutor && docker compose up -d`     | ![CI](../../.github/workflows/mcp-tutor-ci.yml/badge.svg)     |
+
+**Filosofía común**: Los tres usan el **método socrático** — nunca dan respuestas directas, te hacen pensar con preguntas guía.
+
+**Requisitos**:
+
+- **Copilot Tutor**: Requiere `GITHUB_TOKEN` con acceso a Copilot (Business/Enterprise) o GitHub Models
+- **Llama Tutor**: 100% local, no requiere token (descarga ~2GB de modelo)
+- **MCP Tutor**: Requiere `GITHUB_TOKEN` (cualquier PAT con acceso a GitHub Models, gratuito)
+
+Ver [tutor/README.md](../../tutor/README.md) para más detalles.
 
 ---
 
@@ -23,13 +46,13 @@ Preparar tu estación de trabajo para todo el curso: instalar Node.js, configura
 flowchart LR
     subgraph Machine["💻 TU MÁQUINA - WSL/Debian"]
         direction LR
-        
+
         subgraph NodeJS["🟢 Node.js 22<br/><small>Runtime</small>"]
             direction TB
             NPM["📦 npm"]
             NPX["⚡ npx"]
         end
-        
+
         subgraph VSCode["🔵 VS Code<br/><small>IDE</small>"]
             direction TB
             ESLint["🔍 ESLint"]
@@ -37,18 +60,18 @@ flowchart LR
             Copilot["🤖 Copilot"]
             Tailwind["🎨 Tailwind CSS"]
         end
-        
+
         subgraph Terminal["⚫ Terminal<br/><small>zsh/bash</small>"]
             direction TB
             NodeCmd["node"]
             NpmCmd["npm"]
             NpxCmd["npx"]
         end
-        
+
         NodeJS <--> VSCode
         VSCode <--> Terminal
     end
-    
+
     style Machine fill:#f0f0f0,stroke:#333,stroke-width:3px
     style NodeJS fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
     style VSCode fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
